@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 	while((connfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clientlen))) {
 		getnameinfo((struct sockaddr *)&clientaddr, clientlen, client_hostname, MAXLINE, client_port, MAXLINE, 0);
 		printf("Player connected from (%s, %s)\n", client_hostname, client_port);
-		pthread_create(&thread_id, NULL, begin_game, &connfd);
+		pthread_create(&thread_id, NULL, begin_game_server, &connfd);
 	}
 
 	return 0;

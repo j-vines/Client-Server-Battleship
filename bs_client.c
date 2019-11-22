@@ -18,5 +18,7 @@ int main(int argc, char** argv) {
 		error_exit("Could not connect to server at provided hostname and port");
 	}
 
+	begin_game_client(output_fd);
+
 	return 0;
 }

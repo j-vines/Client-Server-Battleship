@@ -15,8 +15,16 @@
 /* Values can either be SHIP if space contains ship, or EMPTY if space is empty */
 int board[BOARD_LENGTH][BOARD_WIDTH];
 
+/* Input of coord where player thinks server's ship is */
+/* Coord[0] = A, B, C, or D
+   Coord[1] = 1, 2, 3, or 4 */
+char coord[2];
+
+/* Client begins game after connecting to server */
+void begin_game_client(int fd);
+
 /* Server creates thread and begins game once client is connected */
-void *begin_game(void *fd);
+void *begin_game_server(void *fd);
 
 /* Creates and binds file descriptor to provided port to begins listening for clients */
 int open_server(char *port);
@@ -35,6 +43,9 @@ int validate(char *coord);
 
 /* Randomly add ships to empty board on start of game */
 void init_board();
+
+/* Server generates random coord to send to client */
+char *gen_coord();
 
 /* Sends coord to server */
 void send_coord(char *coord);

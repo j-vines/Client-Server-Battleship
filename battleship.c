@@ -1,14 +1,24 @@
 #include "battleship.h"
 #include "common.h"
 
+/* Client begins game after connecting to server */
+void begin_game_client(int fd) {
+	sleep(2); //sleep so init_board does not get seeded with same time as server
+	init_board();
+	print_display();
+}
+
 /* Server creates thread and begins game once client is connected */
-void *begin_game(void *fd) {
+void *begin_game_server(void *fd) {
 	int *to_client = (int*)fd;
 	printf("Game begun on fd: %d\n", *to_client);
+	
+	init_board();
+	//print_display();
 	return NULL;
 }
 
-/* Creates and binds file descriptor to provided port to begins listening for clients */
+/* Creates and binds file descriptor to provided port to begin listening for clients */
 int open_server(char *port) {
 	int listenfd;
 	struct addrinfo hints, *listp, *p;
@@ -66,6 +76,21 @@ int connect_server(char *host, int port) {
 
 /* Print player's board to standard output */
 void print_display() {
+	char row_letter = 'A'; //starts at A
+
+	printf("     1    2    3    4\n\n");//columns
+	for(int row = 0; row < BOARD_LENGTH; row++) {
+		printf("%c    ", row_letter);
+		for(int col = 0; col < BOARD_WIDTH; col++) {
+			if(board[row][col] == 1) {
+				printf("X    ");
+			} else {
+				printf("     ");
+			}
+		}
+		printf("\n\n");
+		row_letter += 1;
+	}
 	return;
 }
 
@@ -81,7 +106,29 @@ int validate(char *coord) {
 
 /* Randomly add ships to empty board on start of game */
 void init_board() {
+	srand(time(NULL)); //seed random num gen
+	int ships = 0;
+
+	for(int row = 0; row < BOARD_LENGTH; row++) {
+		for(int col = 0; col < BOARD_WIDTH; col++) {
+			int num = rand() % 10;
+			if(num <= 3) { 
+				board[row][col] = SHIP; //place ship on board
+				ships += 1;
+			}
+			else {
+				board[row][col] = EMPTY;
+			}
+		}
+	}
+
+	printf("Placed %d ships on board...\n", ships);
 	return;
+}
+
+/* Server generates random coord to send to client */
+char *gen_coord() {
+	return NULL;
 }
 
 /* Sends coord to server */
