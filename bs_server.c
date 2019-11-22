@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
 	struct sockaddr_storage clientaddr;
 	char client_hostname[MAXLINE], client_port[MAXLINE];
 
-	pthread_t thread_id;
+	//pthread_t thread_id;
 
 	if(argc != 2) {
 		error_exit("No listening port provided");
@@ -24,12 +24,16 @@ int main(int argc, char** argv) {
 	}
 
 	/* Begin accepting connections */
-	printf("Waiting for players to connect...\n");
+	printf("\n\nHosting BATTLE SHIP on port %s\n", port);
+	printf("Waiting for another player to connect...\n\n");
 	clientlen = sizeof(struct sockaddr_storage);
-	while((connfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clientlen))) {
+	while(1) {
+		connfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clientlen);
 		getnameinfo((struct sockaddr *)&clientaddr, clientlen, client_hostname, MAXLINE, client_port, MAXLINE, 0);
-		printf("Player connected from (%s, %s)\n", client_hostname, client_port);
-		pthread_create(&thread_id, NULL, begin_game_server, &connfd);
+		printf("New player connected from (%s, %s)!\n", client_hostname, client_port);
+		sleep(WAIT);
+		//pthread_create(&thread_id, NULL, begin_game_server, &connfd);
+		begin_game(connfd, PLAYER_ONE);
 	}
 
 	return 0;

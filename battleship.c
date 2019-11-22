@@ -2,44 +2,25 @@
 #include "common.h"
 
 /* Client begins game after connecting to server */
-void begin_game_client(int fd) {
-	int round = 1;
+void begin_game(int fd, int player) {
+	//int round = 1;
 	int ships_remaining;
 	int ships_destroyed = 0;
-	int valid;
 
-	sleep(2); //sleep so init_board does not get seeded with same time as server
-	ships_remaining = init_board();
+	printf("You are player %d\n\n", player);
+	ships_remaining = init_board(player);
 
-	print_display(round, ships_remaining, ships_destroyed);
+	print_display(ships_remaining, ships_destroyed);
 
-	valid = 0;
-	while(valid == 0) { //ask for coordinate until user input is formatted correctly
-		printf("Fire at coordinate: ");
-		fgets(coord, sizeof(coord), stdin);
-		valid = validate(coord);
-		
+	while(ships_remaining > 0) {
+		if(player == PLAYER_ONE) { //Player 1's loop
+			send_coord(fd);
+			read_coord(fd);
+		} else { //Player 2's loop
+			read_coord(fd);
+			send_coord(fd);
+		}
 	}
-	//printf("You input: %s\n", coord);
-	write(fd, &coord, sizeof(coord));
-
-	//while()
-}
-
-/* Server creates thread and begins game once client is connected */
-void *begin_game_server(void *fd) {
-	int *to_client = (int*)fd;
-	//printf("Game begun on fd: %d\n", *to_client);
-	
-	init_board();
-	//print_display();
-	int check = 1;
-	while(check) {
-		read(*to_client, &coord, sizeof(coord));
-		printf("Recieved %s\n", coord);
-		check = 0;
-	}
-	return NULL;
 }
 
 /* Creates and binds file descriptor to provided port to begin listening for clients */
@@ -99,11 +80,10 @@ int connect_server(char *host, int port) {
 }
 
 /* Print player's board to standard output */
-void print_display(int round, int ships_remaining, int ships_destroyed) {
+void print_display(int ships_remaining, int ships_destroyed) {
 	char row_letter = 'A'; //starts at A
 
 	/* Print round info */
-	printf("\nROUND %d\n", round);
 	printf("\tShips remaining: %d\n\tShips destroyed: %d\n\n", ships_remaining, ships_destroyed);
 
 	/* Print board */
@@ -120,11 +100,6 @@ void print_display(int round, int ships_remaining, int ships_destroyed) {
 		printf("\n\n");
 		row_letter += 1;
 	}
-}
-
-/* New turn - ask player for coordinate */
-void turn() {
-	return;
 }
 
 /* Check board for ship at given coord, return 1 if coord is valid format, return 0 otherwise */
@@ -149,8 +124,8 @@ int validate(char *coord) {
 }
 
 /* Randomly add ships to empty board on start of game */
-int init_board() {
-	srand(time(NULL)); //seed random num gen
+int init_board(int seed) {
+	srand(time(NULL) + seed); //seed random num gen
 	int ships = 0;
 
 	for(int row = 0; row < BOARD_LENGTH; row++) {
@@ -170,19 +145,29 @@ int init_board() {
 	return ships;
 }
 
-/* Server generates random coord to send to client */
-char *gen_coord() {
-	return NULL;
-}
-
-/* Sends coord to server */
-void send_coord(char *coord) {
+/* Sends coord to other player */
+void send_coord(int fd) {
+	int valid = 0;
+	while(valid == 0) { //ask for coordinate until user input is formatted correctly
+		printf("Fire at coordinate: ");
+		fgets(coord, sizeof(coord), stdin);
+		valid = validate(coord);
+		
+	}
+	//printf("You input: %s\n", coord);
+	write(fd, &coord, sizeof(coord));
 	return;
 }
 
-/* Reads coord from server */
-char* read_coord() {
-	return NULL;
+/* Reads and processes sent coord */
+char* read_coord(int fd) {
+	while(1) {
+		read(fd, &coord, sizeof(coord));
+		printf("Recieved %s\n", coord);
+		break;
+		//check = 0;
+	}
+	return coord;
 }
 
 /* Player fails - disconnects from server, prints fail state */
