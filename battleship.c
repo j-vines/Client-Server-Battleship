@@ -3,18 +3,42 @@
 
 /* Client begins game after connecting to server */
 void begin_game_client(int fd) {
+	int round = 1;
+	int ships_remaining;
+	int ships_destroyed = 0;
+	int valid;
+
 	sleep(2); //sleep so init_board does not get seeded with same time as server
-	init_board();
-	print_display();
+	ships_remaining = init_board();
+
+	print_display(round, ships_remaining, ships_destroyed);
+
+	valid = 0;
+	while(valid == 0) { //ask for coordinate until user input is formatted correctly
+		printf("Fire at coordinate: ");
+		fgets(coord, sizeof(coord), stdin);
+		valid = validate(coord);
+		
+	}
+	//printf("You input: %s\n", coord);
+	write(fd, &coord, sizeof(coord));
+
+	//while()
 }
 
 /* Server creates thread and begins game once client is connected */
 void *begin_game_server(void *fd) {
 	int *to_client = (int*)fd;
-	printf("Game begun on fd: %d\n", *to_client);
+	//printf("Game begun on fd: %d\n", *to_client);
 	
 	init_board();
 	//print_display();
+	int check = 1;
+	while(check) {
+		read(*to_client, &coord, sizeof(coord));
+		printf("Recieved %s\n", coord);
+		check = 0;
+	}
 	return NULL;
 }
 
@@ -75,9 +99,14 @@ int connect_server(char *host, int port) {
 }
 
 /* Print player's board to standard output */
-void print_display() {
+void print_display(int round, int ships_remaining, int ships_destroyed) {
 	char row_letter = 'A'; //starts at A
 
+	/* Print round info */
+	printf("\nROUND %d\n", round);
+	printf("\tShips remaining: %d\n\tShips destroyed: %d\n\n", ships_remaining, ships_destroyed);
+
+	/* Print board */
 	printf("     1    2    3    4\n\n");//columns
 	for(int row = 0; row < BOARD_LENGTH; row++) {
 		printf("%c    ", row_letter);
@@ -91,7 +120,6 @@ void print_display() {
 		printf("\n\n");
 		row_letter += 1;
 	}
-	return;
 }
 
 /* New turn - ask player for coordinate */
@@ -99,20 +127,36 @@ void turn() {
 	return;
 }
 
-/* Check board for ship at given coord, return 1 if coord contains ship, return 0 otherwise */
+/* Check board for ship at given coord, return 1 if coord is valid format, return 0 otherwise */
 int validate(char *coord) {
+
+	/*printf("\nValidating coord...\n");
+	printf("coord[0] = %c\n", coord[0]);
+	printf("coord[1] = %c\n", coord[1]);*/
+
+	if((coord[0] == 'A' || coord[0] == 'B' || coord[0] == 'C' || coord[0] == 'D') &&
+		(coord[1] == '1' || coord[1] == '2' || coord[1] == '3' || coord[1] == '4')) { //coord valid
+		//CHECK TO MAKE SURE coord[3] IS "\n"!
+		//printf("coord is valid!\n");
+		return 1;
+
+	} else {
+		printf("That coordinate is invalid!\n");
+		memset(&coord, 0, sizeof(coord)); //clear coord buf
+		return 0;
+	}
 	return 0;
 }
 
 /* Randomly add ships to empty board on start of game */
-void init_board() {
+int init_board() {
 	srand(time(NULL)); //seed random num gen
 	int ships = 0;
 
 	for(int row = 0; row < BOARD_LENGTH; row++) {
 		for(int col = 0; col < BOARD_WIDTH; col++) {
 			int num = rand() % 10;
-			if(num <= 3) { 
+			if(num <= 3 && ships != MAX_SHIPS) { 
 				board[row][col] = SHIP; //place ship on board
 				ships += 1;
 			}
@@ -123,7 +167,7 @@ void init_board() {
 	}
 
 	printf("Placed %d ships on board...\n", ships);
-	return;
+	return ships;
 }
 
 /* Server generates random coord to send to client */

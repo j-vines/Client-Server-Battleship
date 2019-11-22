@@ -16,9 +16,9 @@
 int board[BOARD_LENGTH][BOARD_WIDTH];
 
 /* Input of coord where player thinks server's ship is */
-/* Coord[0] = A, B, C, or D
-   Coord[1] = 1, 2, 3, or 4 */
-char coord[2];
+/* coord[0] = A, B, C, or D
+   coord[1] = 1, 2, 3, or 4 */
+char coord[4];
 
 /* Client begins game after connecting to server */
 void begin_game_client(int fd);
@@ -33,16 +33,16 @@ int open_server(char *port);
 int connect_server(char *host, int port);
 
 /* Print player's board to standard output */
-void print_display(); 
+void print_display(int round, int ships_remaining, int ships_destroyed); 
 
 /* New turn - ask player for coordinate */
 void turn();
 
-/* Check board for ship at given coord, return 1 if coord contains ship, return 0 otherwise */
+/* Check board for ship at given coord, return 1 if coord is valid format, return 0 otherwise */
 int validate(char *coord);
 
 /* Randomly add ships to empty board on start of game */
-void init_board();
+int init_board();
 
 /* Server generates random coord to send to client */
 char *gen_coord();
