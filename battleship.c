@@ -8,9 +8,60 @@ void *begin_game(void *fd) {
 	return NULL;
 }
 
+/* Creates and binds file descriptor to provided port to begins listening for clients */
+int open_server(char *port) {
+	int listenfd;
+	struct addrinfo hints, *listp, *p;
+
+	/* Create listenfd */
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG | AI_NUMERICSERV;
+
+	if(getaddrinfo(NULL, port, &hints, &listp) != 0) {
+		return -1;
+	}
+
+	for(p = listp; p; p = p->ai_next) { //iterate through listp for address to bind to
+		if((listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
+			continue; //socket failed, try next
+		}
+
+		if(bind(listenfd, p->ai_addr, p->ai_addrlen) == 0) {
+			break; //success
+		}
+		close(listenfd);
+	}
+
+	freeaddrinfo(listp);
+
+	if(listen(listenfd, 3) < 0) {
+		return -1;
+	}
+
+	return listenfd;
+}
+
 /* Client attempts to connect to server as provided host and port */
-void connect_server() {
-	return;
+int connect_server(char *host, int port) {
+	int sock = 0;
+    struct sockaddr_in serv_addr;
+
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        return -1;
+    }
+  
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+    
+    if(inet_pton(AF_INET, host, &serv_addr.sin_addr) <= 0) {
+        return -1;
+    }
+
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        return -1;
+    }
+	return sock;
 }
 
 /* Print player's board to standard output */

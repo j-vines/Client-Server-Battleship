@@ -18,8 +18,11 @@ int board[BOARD_LENGTH][BOARD_WIDTH];
 /* Server creates thread and begins game once client is connected */
 void *begin_game(void *fd);
 
+/* Creates and binds file descriptor to provided port to begins listening for clients */
+int open_server(char *port);
+
 /* Client attempts to connect to server as provided host and port */
-void connect_server();
+int connect_server(char *host, int port);
 
 /* Print player's board to standard output */
 void print_display(); 
