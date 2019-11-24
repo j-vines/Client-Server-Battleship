@@ -4,23 +4,26 @@
 /* Client begins game after connecting to server */
 void begin_game(int fd, int player) {
 	//int round = 1;
-	int ships_remaining;
-	int ships_destroyed = 0;
 
-	printf("You are player %d\n\n", player);
+	clear();
+	printw("You are player %d\n\n", player);
+	refresh();
+	sleep(WAIT);
+
 	ships_remaining = init_board(player);
 
-	print_display(ships_remaining, ships_destroyed);
-
 	while(ships_remaining > 0) {
+		print_display(ships_remaining);
 		if(player == PLAYER_ONE) { //Player 1's loop
 			send_coord(fd);
 			read_coord(fd);
 		} else { //Player 2's loop
 			read_coord(fd);
+			print_display(ships_remaining);
 			send_coord(fd);
 		}
 	}
+	printw("\nPlayer %d reached end of loop.\n", player);
 }
 
 /* Creates and binds file descriptor to provided port to begin listening for clients */
@@ -80,26 +83,28 @@ int connect_server(char *host, int port) {
 }
 
 /* Print player's board to standard output */
-void print_display(int ships_remaining, int ships_destroyed) {
+void print_display(int ships_remaining) {
 	char row_letter = 'A'; //starts at A
 
+	clear();
 	/* Print round info */
-	printf("\tShips remaining: %d\n\tShips destroyed: %d\n\n", ships_remaining, ships_destroyed);
+	printw("\tShips remaining: %d\n\n", ships_remaining);
 
 	/* Print board */
-	printf("     1    2    3    4\n\n");//columns
+	printw("         1    2    3    4\n\n");//columns
 	for(int row = 0; row < BOARD_LENGTH; row++) {
-		printf("%c    ", row_letter);
+		printw("    %c    ", row_letter);
 		for(int col = 0; col < BOARD_WIDTH; col++) {
 			if(board[row][col] == 1) {
-				printf("X    ");
+				printw("X    ");
 			} else {
-				printf("     ");
+				printw("     ");
 			}
 		}
-		printf("\n\n");
+		printw("\n\n");
 		row_letter += 1;
 	}
+	refresh();
 }
 
 /* Check board for ship at given coord, return 1 if coord is valid format, return 0 otherwise */
@@ -116,7 +121,8 @@ int validate(char *coord) {
 		return 1;
 
 	} else {
-		printf("That coordinate is invalid!\n");
+		printw("That coordinate is invalid!\n");
+		refresh();
 		memset(&coord, 0, sizeof(coord)); //clear coord buf
 		return 0;
 	}
@@ -141,7 +147,7 @@ int init_board(int seed) {
 		}
 	}
 
-	printf("Placed %d ships on board...\n", ships);
+	//printf("Placed %d ships on board...\n", ships);
 	return ships;
 }
 
@@ -149,8 +155,9 @@ int init_board(int seed) {
 void send_coord(int fd) {
 	int valid = 0;
 	while(valid == 0) { //ask for coordinate until user input is formatted correctly
-		printf("Fire at coordinate: ");
-		fgets(coord, sizeof(coord), stdin);
+		printw("Fire at coordinate: ");
+		refresh();
+		getstr(coord);
 		valid = validate(coord);
 		
 	}
@@ -160,28 +167,109 @@ void send_coord(int fd) {
 }
 
 /* Reads and processes sent coord */
-char* read_coord(int fd) {
+void read_coord(int fd) {
 	while(1) {
 		read(fd, &coord, sizeof(coord));
-		printf("Recieved %s\n", coord);
+		if(coord[0] == 'F') { //other player reached fail state
+			success(fd);
+		}
 		break;
-		//check = 0;
 	}
-	return coord;
+	check_board(coord, fd);
+	return;
+}
+
+/* Checks board at recieved coord and updates board accordingly */
+void check_board(char *coord, int fd) {
+	int row;
+	int col;
+
+	//parse coord string for numeric coordinates
+	switch(coord[0]) {
+		case 'A' :
+			col = 0;
+			break;
+		case 'B' :
+			col = 1;
+			break;
+		case 'C' :
+			col = 2;
+			break;
+		case 'D' :
+			col = 3;
+			break;
+	}
+
+	sscanf(&coord[1], "%d", &row);
+	row -= 1;
+
+	//printw("Checking board at row %d col %d\n", row, col);
+	clear();
+	printw("\n\nIncoming missile strike at %s!\n\n", coord);
+	refresh();
+	sleep(WAIT);
+	//check board at coord
+	if(board[col][row] != EMPTY) { //ship is hit
+		clear();
+		printw("\n\nYour ship has sunk!\n\n");
+		board[col][row] = 0;
+		ships_remaining -= 1;
+	} else { //ship is not hit
+		clear();
+		printw("\n\nThe strike missed!\n\n");
+	}
+	refresh();
+	sleep(WAIT);
+
+	if(ships_remaining == 0) { //player has reached fail state
+		failure(fd);
+	}
+	return;
 }
 
 /* Player fails - disconnects from server, prints fail state */
-void failure() {
-	return;
+void failure(int fd) {
+	strcpy(coord, "F");
+
+	clear();
+	printw("\n\nAll of your ships have been sunk...\n\n");
+	refresh();
+	sleep(WAIT);
+	printw("YOU LOSE.");
+	refresh();
+	sleep(WAIT);
+	write(fd, &coord, sizeof(coord));
+
+	close(fd);
+	endwin();
+	exit(0);
 }
 
 /* Player wins - disconnects from server, prints success state */
-void success() {
-	return;
+void success(int fd) {
+	clear();
+	printw("\n\nYou sunk all of <other player>'s ships...\n\n");
+	refresh();
+	sleep(WAIT);
+	printw("YOU WIN!");
+	refresh();
+	sleep(WAIT);
+
+	close(fd);
+	endwin();
+	exit(0);
 }
 
 /* Exit and error, print error message to standard output */
 void error_exit(char *msg) {
 	printf("Error: %s\n" , msg);
 	exit(1);
+}
+
+/* Initialize ncurses screen */
+void init_curse() {
+	initscr();
+	cbreak();
+	clear();
+	refresh();
 }

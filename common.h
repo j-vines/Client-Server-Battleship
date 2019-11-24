@@ -11,5 +11,6 @@
 #include <string.h>
 #include <pthread.h>
 #include <arpa/inet.h>
+#include <curses.h>
 
 #endif

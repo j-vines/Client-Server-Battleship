@@ -7,7 +7,6 @@
 #define WAIT 4
 
 #define MAX_SHIPS 5
-#define MIN_SHIPS 3
 
 #define SHIP 1
 #define EMPTY 0
@@ -18,6 +17,8 @@
 /* Both player and server get randomly initialized board */
 /* Values can either be SHIP if space contains ship, or EMPTY if space is empty */
 int board[BOARD_LENGTH][BOARD_WIDTH];
+
+int ships_remaining;
 
 /* Input of coord where player thinks server's ship is */
 /* coord[0] = A, B, C, or D
@@ -36,7 +37,7 @@ int open_server(char *port);
 int connect_server(char *host, int port);
 
 /* Print player's board to standard output */
-void print_display(int ships_remaining, int ships_destroyed); 
+void print_display(int ships_remaining); 
 
 /* Check board for ship at given coord, return 1 if coord is valid format, return 0 otherwise */
 int validate(char *coord);
@@ -48,15 +49,21 @@ int init_board(int seed);
 void send_coord(int fd);
 
 /* Reads and processes sent coord */
-char* read_coord(int fd);
+void read_coord(int fd);
+
+/* Checks board at recieved coord and updates board accordingly */
+void check_board(char *coord, int fd);
 
 /* Player fails - disconnects from server, prints fail state */
-void failure();
+void failure(int fd);
 
 /* Player wins - disconnects from server, prints success state */
-void success();
+void success(int fd);
 
 /* Exit and error, print error message to standard output */
 void error_exit(char *msg);
+
+/* Initialize ncurses screen */
+void init_curse();
 
 #endif

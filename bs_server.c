@@ -2,7 +2,6 @@
 #include "battleship.h"
 
 #define MAXLINE 8192
-#define LISTENQ 1024
 
 int main(int argc, char** argv) {
 	char *port;
@@ -23,9 +22,12 @@ int main(int argc, char** argv) {
 		error_exit("Could not open server on provided port");
 	}
 
+	init_curse();
+	
 	/* Begin accepting connections */
-	printf("\n\nHosting BATTLE SHIP on port %s\n", port);
-	printf("Waiting for another player to connect...\n\n");
+	printw("\n\nHosting BATTLE SHIP on port %s\n", port);
+	printw("Waiting for another player to connect...\n\n");
+	refresh();
 	clientlen = sizeof(struct sockaddr_storage);
 	while(1) {
 		connfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clientlen);

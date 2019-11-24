@@ -18,7 +18,10 @@ int main(int argc, char** argv) {
 		error_exit("Could not connect to server at provided hostname and port");
 	}
 
-	printf("\n\nYou joined %s's BATTLE SHIP game!\n", host);
+	init_curse();
+
+	printw("\n\nYou joined %s's BATTLE SHIP game!\n", host);
+	refresh();
 	sleep(WAIT);
 	begin_game(output_fd, PLAYER_TWO);
 
