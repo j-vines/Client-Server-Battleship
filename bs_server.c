@@ -32,10 +32,11 @@ int main(int argc, char** argv) {
 	while(1) {
 		connfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clientlen);
 		getnameinfo((struct sockaddr *)&clientaddr, clientlen, client_hostname, MAXLINE, client_port, MAXLINE, 0);
-		printf("New player connected from (%s, %s)!\n", client_hostname, client_port);
+		printw("New player connected from (%s, %s)!\n", client_hostname, client_port);
+		refresh();
 		sleep(WAIT);
-		//pthread_create(&thread_id, NULL, begin_game_server, &connfd);
-		begin_game(connfd, PLAYER_ONE);
+		
+		begin_game(&connfd, PLAYER_ONE);
 	}
 
 	return 0;

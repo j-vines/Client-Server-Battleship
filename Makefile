@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-O -Wall
-LFLAGS=-pthread -lcurses
+LFLAGS=-lpthread -lcurses
 
 all: bs_join bs_host
 

@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
 	printw("\n\nYou joined %s's BATTLE SHIP game!\n", host);
 	refresh();
 	sleep(WAIT);
-	begin_game(output_fd, PLAYER_TWO);
+	begin_game(&output_fd, PLAYER_TWO);
 
 	return 0;
 }

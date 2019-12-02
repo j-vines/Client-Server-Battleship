@@ -6,7 +6,7 @@
 #define PLAYER_TWO 2
 #define WAIT 4
 
-#define MAX_SHIPS 5
+#define MAX_SHIPS 2
 
 #define SHIP 1
 #define EMPTY 0
@@ -19,16 +19,16 @@
 int board[BOARD_LENGTH][BOARD_WIDTH];
 
 int ships_remaining;
+int ships_destroyed;
 
-/* Input of coord where player thinks server's ship is */
-/* coord[0] = A, B, C, or D
-   coord[1] = 1, 2, 3, or 4 
-   coord[3] = \n 
-   coord[4] = \0 */
-char coord[4];
+/* Input and output buffers for reading/writing coordinates */
+char last[4];
+char in_coord[4];
+char out_coord[4];
+char input[4];
 
 /* Client begins game after connecting to server */
-void begin_game(int fd, int player);
+void begin_game(int *fd, int player);
 
 /* Creates and binds file descriptor to provided port to begins listening for clients */
 int open_server(char *port);
@@ -37,10 +37,10 @@ int open_server(char *port);
 int connect_server(char *host, int port);
 
 /* Print player's board to standard output */
-void print_display(int ships_remaining); 
+void print_display(); 
 
 /* Check board for ship at given coord, return 1 if coord is valid format, return 0 otherwise */
-int validate(char *coord);
+int validate();
 
 /* Randomly add ships to empty board on start of game */
 int init_board(int seed);
@@ -51,8 +51,12 @@ void send_coord(int fd);
 /* Reads and processes sent coord */
 void read_coord(int fd);
 
+void *read_data(void *fd);
+
+void *write_data(void *fd);
+
 /* Checks board at recieved coord and updates board accordingly */
-void check_board(char *coord, int fd);
+void check_board(int fd);
 
 /* Player fails - disconnects from server, prints fail state */
 void failure(int fd);

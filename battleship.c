@@ -1,26 +1,36 @@
 #include "battleship.h"
 #include "common.h"
 
+pthread_mutex_t lock;
+
 /* Client begins game after connecting to server */
-void begin_game(int fd, int player) {
+void begin_game(int *fd, int player) {
 	//int round = 1;
+	pthread_t read_id;
+	pthread_t write_id;
 
 	clear();
 	printw("You are player %d\n\n", player);
 	refresh();
 	sleep(WAIT);
 
-	ships_remaining = init_board(player);
+	ships_remaining = init_board(player); //<--- redo init_board so player chooses where their ships go
+	ships_destroyed = 0;
+
+	//create reading and writing processes
+	pthread_create(&read_id, 0, read_data, (void *)fd);
+	pthread_create(&write_id, 0, write_data, (void *)fd);
 
 	while(ships_remaining > 0) {
-		print_display(ships_remaining);
+		
+		print_display();
+		
 		if(player == PLAYER_ONE) { //Player 1's loop
-			send_coord(fd);
-			read_coord(fd);
+			send_coord(*fd);
+			read_coord(*fd);
 		} else { //Player 2's loop
-			read_coord(fd);
-			print_display(ships_remaining);
-			send_coord(fd);
+			read_coord(*fd);
+			send_coord(*fd);
 		}
 	}
 	printw("\nPlayer %d reached end of loop.\n", player);
@@ -83,12 +93,13 @@ int connect_server(char *host, int port) {
 }
 
 /* Print player's board to standard output */
-void print_display(int ships_remaining) {
+void print_display() {
 	char row_letter = 'A'; //starts at A
 
 	clear();
 	/* Print round info */
-	printw("\tShips remaining: %d\n\n", ships_remaining);
+	printw("\tShips remaining: %d\n", ships_remaining);
+	printw("\tShips destroyed: %d\n\n", ships_destroyed);
 
 	/* Print board */
 	printw("         1    2    3    4\n\n");//columns
@@ -108,14 +119,20 @@ void print_display(int ships_remaining) {
 }
 
 /* Check board for ship at given coord, return 1 if coord is valid format, return 0 otherwise */
-int validate(char *coord) {
+int validate() {
 
+	if(strcmp(input, last) == 0) {
+		printw("You just striked that region!\n");
+		refresh();
+		memset(&input, 0, sizeof(input)); //clear coord buf
+		return 0;
+	}
 	/*printf("\nValidating coord...\n");
 	printf("coord[0] = %c\n", coord[0]);
 	printf("coord[1] = %c\n", coord[1]);*/
 
-	if((coord[0] == 'A' || coord[0] == 'B' || coord[0] == 'C' || coord[0] == 'D') &&
-		(coord[1] == '1' || coord[1] == '2' || coord[1] == '3' || coord[1] == '4')) { //coord valid
+	if((input[0] == 'A' || input[0] == 'B' || input[0] == 'C' || input[0] == 'D') &&
+		(input[1] == '1' || input[1] == '2' || input[1] == '3' || input[1] == '4')) { //coord valid
 		//CHECK TO MAKE SURE coord[3] IS "\n"!
 		//printf("coord is valid!\n");
 		return 1;
@@ -123,7 +140,7 @@ int validate(char *coord) {
 	} else {
 		printw("That coordinate is invalid!\n");
 		refresh();
-		memset(&coord, 0, sizeof(coord)); //clear coord buf
+		memset(&input, 0, sizeof(input)); //clear coord buf
 		return 0;
 	}
 	return 0;
@@ -153,39 +170,75 @@ int init_board(int seed) {
 
 /* Sends coord to other player */
 void send_coord(int fd) {
+	memset(&out_coord, 0, sizeof(out_coord));
 	int valid = 0;
 	while(valid == 0) { //ask for coordinate until user input is formatted correctly
 		printw("Fire at coordinate: ");
 		refresh();
-		getstr(coord);
-		valid = validate(coord);
+		getstr(input);
+		valid = validate();
 		
 	}
-	//printf("You input: %s\n", coord);
-	write(fd, &coord, sizeof(coord));
+	strcpy(out_coord, input);
 	return;
+}
+
+void *read_data(void *arg) {
+	int *fd = (int *)arg;
+	while(1) {
+		read(*fd, &in_coord, sizeof(in_coord));
+	}
+}
+
+void *write_data(void *arg) {
+	int *fd = (int *)arg;
+	while(1) {
+		write(*fd, &out_coord, sizeof(out_coord));
+	}
 }
 
 /* Reads and processes sent coord */
 void read_coord(int fd) {
+	memset(&in_coord, 0, sizeof(in_coord));
 	while(1) {
-		read(fd, &coord, sizeof(coord));
-		if(coord[0] == 'F') { //other player reached fail state
+		if(in_coord[0] == 0) {
+			sleep(1);
+		} 
+		else if(strcmp(in_coord, last) == 0) { //program won't reread old input and throw off game
+			sleep(1);
+		}
+		else if(in_coord[0] == 'F') {
 			success(fd);
 		}
-		break;
+		else if(in_coord[0] == 'H') {
+			printw("Your strike was successful!");
+			refresh();
+			sleep(WAIT);
+			ships_destroyed += 1;
+			print_display();
+		}
+		else if(in_coord[0] == 'M') {
+			printw("Your strike missed...");
+			refresh();
+			sleep(4);
+			print_display();
+		}
+		else {
+			strcpy(last, in_coord);
+			check_board(fd);
+			print_display();
+			return;
+		}
 	}
-	check_board(coord, fd);
-	return;
 }
 
 /* Checks board at recieved coord and updates board accordingly */
-void check_board(char *coord, int fd) {
+void check_board(int fd) {
 	int row;
 	int col;
 
 	//parse coord string for numeric coordinates
-	switch(coord[0]) {
+	switch(in_coord[0]) {
 		case 'A' :
 			col = 0;
 			break;
@@ -200,12 +253,11 @@ void check_board(char *coord, int fd) {
 			break;
 	}
 
-	sscanf(&coord[1], "%d", &row);
+	sscanf(&in_coord[1], "%d", &row);
 	row -= 1;
 
-	//printw("Checking board at row %d col %d\n", row, col);
 	clear();
-	printw("\n\nIncoming missile strike at %s!\n\n", coord);
+	printw("\n\nIncoming missile strike at %s!\n\n", in_coord);
 	refresh();
 	sleep(WAIT);
 	//check board at coord
@@ -214,9 +266,11 @@ void check_board(char *coord, int fd) {
 		printw("\n\nYour ship has sunk!\n\n");
 		board[col][row] = 0;
 		ships_remaining -= 1;
+		strcpy(out_coord, "H");
 	} else { //ship is not hit
 		clear();
 		printw("\n\nThe strike missed!\n\n");
+		strcpy(out_coord, "M");
 	}
 	refresh();
 	sleep(WAIT);
@@ -229,7 +283,7 @@ void check_board(char *coord, int fd) {
 
 /* Player fails - disconnects from server, prints fail state */
 void failure(int fd) {
-	strcpy(coord, "F");
+	strcpy(out_coord, "F");
 
 	clear();
 	printw("\n\nAll of your ships have been sunk...\n\n");
@@ -238,7 +292,7 @@ void failure(int fd) {
 	printw("YOU LOSE.");
 	refresh();
 	sleep(WAIT);
-	write(fd, &coord, sizeof(coord));
+	strcpy(out_coord, "F");
 
 	close(fd);
 	endwin();
