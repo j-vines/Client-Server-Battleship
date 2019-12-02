@@ -5,22 +5,32 @@ pthread_mutex_t lock;
 
 /* Client begins game after connecting to server */
 void begin_game(int *fd, int player) {
-	//int round = 1;
 	pthread_t read_id;
 	pthread_t write_id;
 
+	if(player == PLAYER_ONE) {
+		other_player = PLAYER_TWO;
+	} else {
+		other_player = PLAYER_ONE;
+	}
+
 	clear();
-	printw("You are player %d\n\n", player);
+	printw("You are Player %d\n\n", player);
 	refresh();
 	sleep(WAIT);
 
-	ships_remaining = init_board(player); //<--- redo init_board so player chooses where their ships go
+	//player places their boards
+	ships_remaining = init_board(player); 
 	ships_destroyed = 0;
+
+	//display game start screen
+	start_screen();
 
 	//create reading and writing processes
 	pthread_create(&read_id, 0, read_data, (void *)fd);
 	pthread_create(&write_id, 0, write_data, (void *)fd);
 
+	//main game loop
 	while(ships_remaining > 0) {
 		
 		print_display();
@@ -120,11 +130,9 @@ void print_display() {
 
 /* Check board for ship at given coord, return 1 if coord is valid format, return 0 otherwise */
 int validate() {
-
-	if(strcmp(input, last) == 0) {
-		printw("You just striked that region!\n");
-		refresh();
-		memset(&input, 0, sizeof(input)); //clear coord buf
+	if(already_used()) { //check if input has already been used
+		printw("You already used that coord!\n");
+		memset(&input, 0, sizeof(input));
 		return 0;
 	}
 	/*printf("\nValidating coord...\n");
@@ -148,23 +156,70 @@ int validate() {
 
 /* Randomly add ships to empty board on start of game */
 int init_board(int seed) {
-	srand(time(NULL) + seed); //seed random num gen
 	int ships = 0;
+	int ships_to_place = MAX_SHIPS;
 
-	for(int row = 0; row < BOARD_LENGTH; row++) {
-		for(int col = 0; col < BOARD_WIDTH; col++) {
-			int num = rand() % 10;
-			if(num <= 3 && ships != MAX_SHIPS) { 
-				board[row][col] = SHIP; //place ship on board
-				ships += 1;
+	while(ships < MAX_SHIPS) {
+		clear();
+		char row_letter = 'A';
+		printw("Arrange your ships...\n");
+		printw("\tShips to place: %d\n\n", ships_to_place);
+		printw("         1    2    3    4\n\n");//columns
+		for(int row = 0; row < BOARD_LENGTH; row++) {
+			printw("    %c    ", row_letter);
+			for(int col = 0; col < BOARD_WIDTH; col++) {
+				if(board[row][col] == 1) {
+					printw("X    ");
+				} else {
+					printw("     ");
+				}
 			}
-			else {
-				board[row][col] = EMPTY;
-			}
+			printw("\n\n");
+			row_letter += 1;
 		}
+		int valid = 0;
+		while(valid == 0) { //ask for coordinate until user input is formatted correctly
+			printw("Place a ship at coordinate: ");
+			refresh();
+			getstr(input);
+			valid = validate();
+		}
+		if(already_used()) {
+			printw("\nYou already placed a ship at %s.\n", input);
+			refresh();
+			sleep(WAIT);
+			clear();
+			continue;
+		}
+		strcpy(old_inputs[ships], input);
+
+		int row;
+		int col;
+
+		//parse coord string for numeric coordinates
+		switch(input[0]) {
+			case 'A' :
+				col = 0;
+				break;
+			case 'B' :
+				col = 1;
+				break;
+			case 'C' :
+				col = 2;
+				break;
+			case 'D' :
+				col = 3;
+				break;
+		}
+		sscanf(&input[1], "%d", &row);
+		row -= 1;
+
+		board[col][row] = SHIP;
+		ships += 1;
+		ships_to_place -= 1;
 	}
 
-	//printf("Placed %d ships on board...\n", ships);
+	memset(&old_inputs, 0, sizeof(old_inputs)); //clear old input array
 	return ships;
 }
 
@@ -177,8 +232,9 @@ void send_coord(int fd) {
 		refresh();
 		getstr(input);
 		valid = validate();
-		
 	}
+	strcpy(old_inputs[old_inputs_index], input); //store accepted input in previously used input array
+	old_inputs_index += 1;
 	strcpy(out_coord, input);
 	return;
 }
@@ -207,17 +263,17 @@ void read_coord(int fd) {
 		else if(strcmp(in_coord, last) == 0) { //program won't reread old input and throw off game
 			sleep(1);
 		}
-		else if(in_coord[0] == 'F') {
+		else if(strcmp(&in_coord[0], FAIL) == 0) {
 			success(fd);
 		}
-		else if(in_coord[0] == 'H') {
+		else if(strcmp(&in_coord[0], HIT) == 0) {
 			printw("Your strike was successful!");
 			refresh();
 			sleep(WAIT);
 			ships_destroyed += 1;
 			print_display();
 		}
-		else if(in_coord[0] == 'M') {
+		else if(strcmp(&in_coord[0], MISS) == 0) {
 			printw("Your strike missed...");
 			refresh();
 			sleep(4);
@@ -266,11 +322,11 @@ void check_board(int fd) {
 		printw("\n\nYour ship has sunk!\n\n");
 		board[col][row] = 0;
 		ships_remaining -= 1;
-		strcpy(out_coord, "H");
+		strcpy(out_coord, HIT);
 	} else { //ship is not hit
 		clear();
 		printw("\n\nThe strike missed!\n\n");
-		strcpy(out_coord, "M");
+		strcpy(out_coord, MISS);
 	}
 	refresh();
 	sleep(WAIT);
@@ -279,6 +335,22 @@ void check_board(int fd) {
 		failure(fd);
 	}
 	return;
+}
+
+int already_used() {
+	for(int i = 0; i < STORED_INPUTS; i++) {
+		if(strcmp(input, old_inputs[i]) == 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+void start_screen() {
+	clear();
+	printw("\n\nGame is starting...");
+	refresh();
+	sleep(WAIT);
 }
 
 /* Player fails - disconnects from server, prints fail state */
@@ -292,7 +364,7 @@ void failure(int fd) {
 	printw("YOU LOSE.");
 	refresh();
 	sleep(WAIT);
-	strcpy(out_coord, "F");
+	strcpy(out_coord, FAIL);
 
 	close(fd);
 	endwin();
@@ -302,7 +374,7 @@ void failure(int fd) {
 /* Player wins - disconnects from server, prints success state */
 void success(int fd) {
 	clear();
-	printw("\n\nYou sunk all of <other player>'s ships...\n\n");
+	printw("\n\nYou sunk all of Player %d's ships...\n\n", other_player);
 	refresh();
 	sleep(WAIT);
 	printw("YOU WIN!");
