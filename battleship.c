@@ -9,6 +9,7 @@
 void begin_game(int *fd, int player) {
 	pthread_t read_id;
 	pthread_t write_id;
+	gameover = 0; //gameover is 0 at start of game, set to 1 once fail state is reached
 
 	if(player == PLAYER_ONE) {
 		other_player = PLAYER_TWO;
@@ -40,12 +41,14 @@ void begin_game(int *fd, int player) {
 		if(player == PLAYER_ONE) { //Player 1's loop
 			send_coord(*fd);
 			read_coord(*fd);
+			if(gameover == 1) return; //return to main menu
 		} else { //Player 2's loop
 			read_coord(*fd);
+			if(gameover == 1) return; //return to main menu
 			send_coord(*fd);
 		}
 	}
-	printw("\nPlayer %d reached end of loop.\n", player);
+	return;
 }
 
 /* Creates and binds file descriptor to provided port to begin listening for clients */
@@ -239,6 +242,9 @@ void send_coord(int fd) {
 void *read_data(void *arg) {
 	int *fd = (int *)arg;
 	while(1) {
+		if(gameover == 1) {
+			pthread_exit(0);
+		}
 		read(*fd, &in_coord, sizeof(in_coord));
 	}
 }
@@ -246,6 +252,9 @@ void *read_data(void *arg) {
 void *write_data(void *arg) {
 	int *fd = (int *)arg;
 	while(1) {
+		if(gameover == 1) {
+			pthread_exit(0);
+		}
 		write(*fd, &out_coord, sizeof(out_coord));
 	}
 }
@@ -263,6 +272,7 @@ void read_coord(int fd) {
 		}
 		else if(strcmp(&in_coord[0], FAIL) == 0) {
 			success(fd);
+			return;
 		}
 		
 		// recieves notification of attack hit or miss
@@ -384,6 +394,7 @@ void start_screen(int player) {
 void failure(int fd) {
 	strcpy(out_coord, "F");
 
+	
 	clear();
 	printw("\n\nAll of your ships have been sunk...\n\n");
 	refresh();
@@ -392,25 +403,22 @@ void failure(int fd) {
 	refresh();
 	sleep(WAIT);
 	strcpy(out_coord, FAIL);
-
-	close(fd);
-	endwin();
-	exit(0);
+	gameover = 1;
+	return;
 }
 
 /* Player wins - disconnects from server, prints success state */
 void success(int fd) {
+	
 	clear();
-	printw("\n\nAllYou sunk all of Player %d's ships...\n\n", other_player);
+	printw("\n\nYou sunk all of Player %d's ships...\n\n", other_player);
 	refresh();
 	sleep(WAIT);
 	printw("	YOU WIN!");
 	refresh();
 	sleep(WAIT);
-
-	close(fd);
-	endwin();
-	exit(0);
+	gameover = 1;
+	return;
 }
 
 /* Exit and error, print error message to standard output */

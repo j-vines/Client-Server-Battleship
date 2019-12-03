@@ -92,7 +92,7 @@ void host() {
 	
 	/* Begin accepting connections */
 	clear();
-	printw("\n\nHosting BATTLE SHIP on port %s\n", port);
+	printw("\n\nHosting BATTLESHIP on port %s\n", port);
 	printw("Waiting for another player to connect...\n\n");
 	refresh();
 	clientlen = sizeof(struct sockaddr_storage);
@@ -144,7 +144,7 @@ void join() {
 		return;
 	}
 	clear();
-	printw("\n\nYou joined %s's BATTLE SHIP game!\n", host);
+	printw("\n\nYou joined %s's BATTLESHIP game!\n", host);
 	refresh();
 	sleep(WAIT);
 	begin_game(&output_fd, PLAYER_TWO);
@@ -153,7 +153,7 @@ void join() {
 
 /* Displays instructions */
 void instructions() {
-
+	return;
 }
 
 /* Quits game */

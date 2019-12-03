@@ -22,6 +22,7 @@ int board[BOARD_LENGTH][BOARD_WIDTH];
 int ships_remaining;
 int ships_destroyed;
 int other_player;
+int gameover;
 
 /* Input and output buffers for reading/writing coordinates */
 char last[4];
