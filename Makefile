@@ -2,20 +2,15 @@ CC=gcc
 CFLAGS=-O -Wall
 LFLAGS=-lpthread -lcurses
 
-all: bs_join bs_host
+all: battleship
 
-bs_join: bs_client.c common.h battleship.h battleship.c
-	$(CC) $(CFLAGS) -c -o bs_client.o bs_client.c
+battleship: bs.c menu.h common.h battleship.c battleship.h
+	$(CC) $(CFLAGS) -c -o bs.o bs.c
 	$(CC) $(CFLAGS) -c -o battleship.o battleship.c
-	$(CC) -o bs_join bs_client.o battleship.o $(LFLAGS)
-
-bs_host: bs_server.c common.h battleship.h battleship.c
-	$(CC) $(CFLAGS) -c -o bs_server.o bs_server.c
-	$(CC) $(CFLAGS) -c -o battleship.o battleship.c
-	$(CC) -o bs_host bs_server.o battleship.o $(LFLAGS)
+	$(CC) -o battleship bs.o battleship.o $(LFLAGS)
 
 clean:
-	rm *.o bs_join bs_host
+	rm *.o battleship
 
 test:
-	./bs_host 80
+	./battleship

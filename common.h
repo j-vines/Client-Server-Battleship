@@ -13,4 +13,6 @@
 #include <arpa/inet.h>
 #include <curses.h>
 
+#define MAXLINE 8192
+
 #endif

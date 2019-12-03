@@ -1,7 +1,9 @@
 #include "battleship.h"
 #include "common.h"
 
-pthread_mutex_t lock;
+//NEED: communication between processes/threads and file I/O and signals
+//Create file to store number of wins per person... usernames
+//If someone uses ctrl-C, quit game for both players and whoever forfeited loses
 
 /* Client begins game after connecting to server */
 void begin_game(int *fd, int player) {
@@ -14,17 +16,17 @@ void begin_game(int *fd, int player) {
 		other_player = PLAYER_ONE;
 	}
 
-	clear();
-	printw("You are Player %d\n\n", player);
-	refresh();
-	sleep(WAIT);
+	start_screen(player); //show title screen
 
 	//player places their boards
 	ships_remaining = init_board(player); 
 	ships_destroyed = 0;
 
-	//display game start screen
-	start_screen();
+	//display game startint screen
+	clear();
+	printw("\n\nGame is starting...");
+	refresh();
+	sleep(WAIT);
 
 	//create reading and writing processes
 	pthread_create(&read_id, 0, read_data, (void *)fd);
@@ -135,14 +137,9 @@ int validate() {
 		memset(&input, 0, sizeof(input));
 		return 0;
 	}
-	/*printf("\nValidating coord...\n");
-	printf("coord[0] = %c\n", coord[0]);
-	printf("coord[1] = %c\n", coord[1]);*/
 
 	if((input[0] == 'A' || input[0] == 'B' || input[0] == 'C' || input[0] == 'D') &&
 		(input[1] == '1' || input[1] == '2' || input[1] == '3' || input[1] == '4')) { //coord valid
-		//CHECK TO MAKE SURE coord[3] IS "\n"!
-		//printf("coord is valid!\n");
 		return 1;
 
 	} else {
@@ -256,6 +253,7 @@ void *write_data(void *arg) {
 /* Reads and processes sent coord */
 void read_coord(int fd) {
 	memset(&in_coord, 0, sizeof(in_coord));
+	int recieved = 0;
 	while(1) {
 		if(in_coord[0] == 0) {
 			sleep(1);
@@ -266,19 +264,37 @@ void read_coord(int fd) {
 		else if(strcmp(&in_coord[0], FAIL) == 0) {
 			success(fd);
 		}
+		
+		// recieves notification of attack hit or miss
+		// first time notification is recieved, notify player
+		// if notification is recieved again, ignore it
 		else if(strcmp(&in_coord[0], HIT) == 0) {
-			printw("Your strike was successful!");
-			refresh();
-			sleep(WAIT);
-			ships_destroyed += 1;
-			print_display();
+			if(recieved == 0) {
+				recieved = 1;
+				printw("Your strike was successful!");
+				refresh();
+				sleep(WAIT);
+				ships_destroyed += 1;
+				print_display();
+			} else { // already notified, ignore
+				sleep(1);
+			}
+			
 		}
 		else if(strcmp(&in_coord[0], MISS) == 0) {
-			printw("Your strike missed...");
-			refresh();
-			sleep(4);
-			print_display();
+			if(recieved == 0) {
+				recieved = 1;
+				printw("Your strike missed...");
+				refresh();
+				sleep(4);
+				print_display();
+			} else { // already notified, ignore
+				sleep(1);
+			}
+			
 		}
+
+		// new coord has been recieved -- check board and print display
 		else {
 			strcpy(last, in_coord);
 			check_board(fd);
@@ -346,9 +362,20 @@ int already_used() {
 	return 0;
 }
 
-void start_screen() {
+void start_screen(int player) {
 	clear();
-	printw("\n\nGame is starting...");
+	printw("\n\n");
+                                                                      
+	printw("	 _____  _____  _____  _____  __     _____  _____  _____  _____  _____ \n");
+	printw("	| __  ||  _  ||_   _||_   _||  |   |   __||   __||  |  ||     ||  _  |\n");
+	printw("	| __ -||     |  | |    | |  |  |__ |   __||__   ||     ||-   -||   __|\n");
+	printw("	|_____||__|__|  |_|    |_|  |_____||_____||_____||__|__||_____||__|   \n");
+	printw("	IS BEGINNING...");
+                                                                    
+	refresh();
+	sleep(WAIT);
+	clear();
+	printw("	You are Player %d\n\n", player);
 	refresh();
 	sleep(WAIT);
 }
@@ -361,7 +388,7 @@ void failure(int fd) {
 	printw("\n\nAll of your ships have been sunk...\n\n");
 	refresh();
 	sleep(WAIT);
-	printw("YOU LOSE.");
+	printw("	YOU LOSE.");
 	refresh();
 	sleep(WAIT);
 	strcpy(out_coord, FAIL);
@@ -374,10 +401,10 @@ void failure(int fd) {
 /* Player wins - disconnects from server, prints success state */
 void success(int fd) {
 	clear();
-	printw("\n\nYou sunk all of Player %d's ships...\n\n", other_player);
+	printw("\n\nAllYou sunk all of Player %d's ships...\n\n", other_player);
 	refresh();
 	sleep(WAIT);
-	printw("YOU WIN!");
+	printw("	YOU WIN!");
 	refresh();
 	sleep(WAIT);
 

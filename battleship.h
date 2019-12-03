@@ -5,7 +5,7 @@
 #define PLAYER_ONE 1
 #define PLAYER_TWO 2
 #define WAIT 4
-#define MAX_SHIPS 2
+#define MAX_SHIPS 1 //TEST
 #define SHIP 1
 #define EMPTY 0
 #define BOARD_LENGTH 4
@@ -67,7 +67,7 @@ void check_board(int fd);
 int already_used();
 
 /* Displays the game start screen */
-void start_screen();
+void start_screen(int player);
 
 /* Player fails - disconnects from server, prints fail state */
 void failure(int fd);
