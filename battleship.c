@@ -23,6 +23,10 @@ void begin_game(int *fd, int player) {
 	ships_remaining = init_board(player); 
 	ships_destroyed = 0;
 
+	//Make sure both players are ready
+	wait_for_ready(fd);
+
+
 	//display game startint screen
 	clear();
 	printw("\n\nGame is starting...");
@@ -429,6 +433,28 @@ void success(int fd) {
 void error_exit(char *msg) {
 	printf("Error: %s\n" , msg);
 	exit(1);
+}
+
+/* Wait for other player to send R */
+void wait_for_ready(int *fd) {
+	clear();
+	printw("Hit any key when you're ready to play!");
+	getch();
+	strcpy(out_coord, READY);
+	write(*fd, &out_coord, sizeof(out_coord));
+	memset(&out_coord, 0, sizeof(in_coord));
+
+	clear();
+	printw("Waiting for Player %d...", other_player);
+	refresh();
+
+	while(1) {
+		if(strcmp(&in_coord[0], READY) == 0) { //Once READY, end reading process
+			memset(&in_coord, 0, sizeof(in_coord));
+			return;
+		}
+		read(*fd, &in_coord, sizeof(in_coord));
+	}
 }
 
 /* Initialize ncurses screen */

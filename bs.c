@@ -11,7 +11,6 @@ void sig_handler(int sig) {
 	return;
 }
 
-
 int main() {
 	signal(SIGINT, sig_handler); //ignore SIGINT
 	init_curse();
@@ -61,7 +60,7 @@ void display_menu() {
 	printw("		|                                          |\n");	
 	printw("		|   (1)    HOST GAME                       |\n");
 	printw("		|   (2)    JOIN GAME                       |\n");
-	printw("		|   (3)    INSTRUCTIONS                    |\n");
+	printw("		|   (3)    SEE INSTRUCTIONS                |\n");
 	printw("		|                                          |\n");
 	printw("		|   (4)    EXIT                            |\n");
 	printw("		!__________________________________________!\n");
@@ -160,6 +159,29 @@ void join() {
 
 /* Displays instructions */
 void instructions() {
+
+	clear();
+	printw("\n\n");
+	printw("	 _____  _____  _ _ _    _____  _____    _____  __     _____  __ __ \n");
+	printw("	|  |  ||     || | | |  |_   _||     |  |  _  ||  |   |  _  ||  |  |\n");
+	printw("	|     ||  |  || | | |    | |  |  |  |  |   __||  |__ |     ||_   _|\n");
+	printw("	|__|__||_____||_____|    |_|  |_____|  |__|   |_____||__|__|  |_|  \n\n");
+	printw("	Press any key to return... \n\n");
+	printw("	Creating a game:\n");
+	printw("	To host a game, pick HOST GAME at the main menu, then type a listening\n");
+	printw("	port to host a game on. A player who wishes to join your game must \n");
+	printw("	have your IP address as well as the number of the port you chose to \n");
+	printw("	host the server on. Once a connection is made, your game will begin.\n\n");
+	printw("	Playing the game:\n");
+	printw("	BATTLESHIP is a turn based 2 player game where each player has a coord-\n");
+	printw("	inate grid and 5 ships. Once your ships are arranged on your grid, you\n");
+	printw("	and your opponent will take turns firing missiles at coordinates on the\n");
+	printw("	other person's grid. The player who destroys all of the other's ships\n");
+	printw("	with missiles first wins.\n\n");
+	printw("	Coordinates should be formatted as \"A1\", \"C4\", etc.\n");
+                                                                   
+    refresh();
+    getch();                                                                                
 	return;
 }
 

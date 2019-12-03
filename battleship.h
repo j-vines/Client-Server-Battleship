@@ -13,6 +13,7 @@
 #define HIT "H"
 #define MISS "M"
 #define FAIL "F"
+#define READY "R"
 #define STORED_INPUTS 20
 
 /* Both player and server get randomly initialized board */
@@ -80,6 +81,8 @@ void success(int fd);
 
 /* Exit and error, print error message to standard output */
 void error_exit(char *msg);
+
+void wait_for_ready(int *fd);
 
 /* Initialize ncurses screen */
 void init_curse();
