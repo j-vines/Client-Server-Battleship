@@ -5,6 +5,8 @@
 //Create file to store number of wins per person... usernames
 //If someone uses ctrl-C, quit game for both players and whoever forfeited loses
 
+/* battleship.c contains functions used during game play */
+
 /* Client begins game after connecting to server */
 void begin_game(int *fd, int player) {
 	pthread_t read_id;
@@ -382,14 +384,12 @@ int already_used() {
 /* Text displayed before start of game */
 void start_screen(int player) {
 	clear();
-	printw("\n\n");
-                                                                      
+	printw("\n\n");                                                                
 	printw("	 _____  _____  _____  _____  __     _____  _____  _____  _____  _____ \n");
 	printw("	| __  ||  _  ||_   _||_   _||  |   |   __||   __||  |  ||     ||  _  |\n");
 	printw("	| __ -||     |  | |    | |  |  |__ |   __||__   ||     ||-   -||   __|\n");
 	printw("	|_____||__|__|  |_|    |_|  |_____||_____||_____||__|__||_____||__|   \n");
-	printw("	IS BEGINNING...");
-                                                                    
+	printw("	IS BEGINNING...");                                                            
 	refresh();
 	sleep(WAIT);
 	clear();
@@ -401,8 +401,6 @@ void start_screen(int player) {
 /* Player fails - disconnects from server, prints fail state */
 void failure(int fd) {
 	strcpy(out_coord, "F");
-
-	
 	clear();
 	printw("\n\nAll of your ships have been sunk...\n\n");
 	refresh();
@@ -417,7 +415,6 @@ void failure(int fd) {
 
 /* Player wins - disconnects from server, prints success state */
 void success(int fd) {
-	
 	clear();
 	printw("\n\nYou sunk all of Player %d's ships...\n\n", other_player);
 	refresh();
@@ -435,7 +432,7 @@ void error_exit(char *msg) {
 	exit(1);
 }
 
-/* Wait for other player to send R */
+/* Wait for other player to send READY */
 void wait_for_ready(int *fd) {
 	clear();
 	printw("Hit any key when you're ready to play!");

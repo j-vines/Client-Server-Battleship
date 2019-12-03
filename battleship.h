@@ -1,6 +1,8 @@
 #ifndef battleship_h
 #define battleship_h
 
+/* battleship.h contains constants, global variables, and prototypes for functions used during gameplay */
+
 /* Declaration of constants */
 #define PLAYER_ONE 1
 #define PLAYER_TWO 2
@@ -19,8 +21,7 @@
 /* Both player and server get randomly initialized board */
 /* Values can either be SHIP if space contains ship, or EMPTY if space is empty */
 int board[BOARD_LENGTH][BOARD_WIDTH];
-
-int ships_remaining;
+int ships_remaining; 
 int ships_destroyed;
 int other_player;
 int gameover;
@@ -30,7 +31,6 @@ char last[4];
 char in_coord[4];
 char out_coord[4];
 char input[4];
-
 int old_inputs_index;
 char old_inputs[STORED_INPUTS][4]; //array to hold inputs already tried
 
@@ -82,6 +82,7 @@ void success(int fd);
 /* Exit and error, print error message to standard output */
 void error_exit(char *msg);
 
+/* Wait for other player to send READY */
 void wait_for_ready(int *fd);
 
 /* Initialize ncurses screen */

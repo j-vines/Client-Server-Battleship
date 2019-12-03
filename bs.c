@@ -2,6 +2,8 @@
 #include "menu.h"
 #include "battleship.h"
 
+/* bs.c contains driver and functions for main menu */
+
 char name[25];
 char choice;
 char in[100];
@@ -11,6 +13,10 @@ void sig_handler(int sig) {
 	return;
 }
 
+/* Driver for Battleship - displays main menu */
+/* From main menu you can choose to HOST or JOIN an existing game,
+   view the instructions for the game, or exit the program. Navigate menu
+   with numeric keys 1-4 */
 int main() {
 	signal(SIGINT, sig_handler); //ignore SIGINT
 	init_curse();
@@ -109,6 +115,7 @@ void host() {
 		refresh();
 		sleep(WAIT);
 
+		//connection has been made -- begin game
 		begin_game(&connfd, PLAYER_ONE);
 		return;
 	}
@@ -119,7 +126,6 @@ void join() {
 	int port, output_fd;
 	char host[100];
 	char port_str[100];
-
 	clear();
 	echo();
 	printw("\n\n");
@@ -130,7 +136,6 @@ void join() {
 	printw("	Host to connect to: ");
 	refresh();
 	getstr(host);
-
 	clear();
 	printw("\n\n");
 	printw("	    __  _____  _____  _____    _____  _____  _____  _____ \n");
@@ -153,13 +158,14 @@ void join() {
 	printw("\n\nYou joined %s's BATTLESHIP game!\n", host);
 	refresh();
 	sleep(WAIT);
+
+	//connected to server -- begin game
 	begin_game(&output_fd, PLAYER_TWO);
 	return;
 }
 
 /* Displays instructions */
 void instructions() {
-
 	clear();
 	printw("\n\n");
 	printw("	 _____  _____  _ _ _    _____  _____    _____  __     _____  __ __ \n");
@@ -178,8 +184,7 @@ void instructions() {
 	printw("	and your opponent will take turns firing missiles at coordinates on the\n");
 	printw("	other person's grid. The player who destroys all of the other's ships\n");
 	printw("	with missiles first wins.\n\n");
-	printw("	Coordinates should be formatted as \"A1\", \"C4\", etc.\n");
-                                                                   
+	printw("	Coordinates should be formatted as \"A1\", \"C4\", etc.\n");                                                             
     refresh();
     getch();                                                                                
 	return;

@@ -1,6 +1,8 @@
 #ifndef common_h
 #define common_h
 
+/* common.h stores includes statements used throughout project */
+
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdio.h>

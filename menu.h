@@ -1,6 +1,8 @@
 #ifndef menu_h
 #define menu_h
 
+/* menu.h contains function prototypes for main menu options */
+
 /* Displays main menu with options to host game, join game, or view leaderboards */
 void display_menu();
 
