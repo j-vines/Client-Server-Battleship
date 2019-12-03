@@ -6,7 +6,14 @@ char name[25];
 char choice;
 char in[100];
 
+/* Catch and ignore SIGINT -- player can't use ctrl-c to close program */
+void sig_handler(int sig) {
+	return;
+}
+
+
 int main() {
+	signal(SIGINT, sig_handler); //ignore SIGINT
 	init_curse();
 	curs_set(0);
 	

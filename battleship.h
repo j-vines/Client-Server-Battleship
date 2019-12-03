@@ -5,7 +5,7 @@
 #define PLAYER_ONE 1
 #define PLAYER_TWO 2
 #define WAIT 4
-#define MAX_SHIPS 1 //TEST
+#define MAX_SHIPS 5
 #define SHIP 1
 #define EMPTY 0
 #define BOARD_LENGTH 4
@@ -42,13 +42,13 @@ int open_server(char *port);
 /* Client attempts to connect to server as provided host and port */
 int connect_server(char *host, int port);
 
-/* Print player's board to standard output */
+/* Print player's board to curses window */
 void print_display(); 
 
 /* Check board for ship at given coord, return 1 if coord is valid format, return 0 otherwise */
 int validate();
 
-/* Randomly add ships to empty board on start of game */
+/* Add ships to empty board on start of game */
 int init_board(int seed);
 
 /* Sends coord to other player */
@@ -57,8 +57,10 @@ void send_coord(int fd);
 /* Reads and processes sent coord */
 void read_coord(int fd);
 
+/* Constantly reads contents from socket into in_coord concurrently */
 void *read_data(void *fd);
 
+/* Constantly writes contents of out_coord to socket concurrently */
 void *write_data(void *fd);
 
 /* Checks board at recieved coord and updates board accordingly */

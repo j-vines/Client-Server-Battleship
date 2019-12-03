@@ -107,7 +107,7 @@ int connect_server(char *host, int port) {
 	return sock;
 }
 
-/* Print player's board to standard output */
+/* Print player's board to curses window */
 void print_display() {
 	char row_letter = 'A'; //starts at A
 
@@ -154,7 +154,7 @@ int validate() {
 	return 0;
 }
 
-/* Randomly add ships to empty board on start of game */
+/* Add ships to empty board on start of game */
 int init_board(int seed) {
 	int ships = 0;
 	int ships_to_place = MAX_SHIPS;
@@ -239,27 +239,29 @@ void send_coord(int fd) {
 	return;
 }
 
+/* Constantly reads contents from socket into in_coord concurrently */
 void *read_data(void *arg) {
 	int *fd = (int *)arg;
 	while(1) {
-		if(gameover == 1) {
+		if(gameover == 1) { //close reading thread on game over
 			pthread_exit(0);
 		}
 		read(*fd, &in_coord, sizeof(in_coord));
 	}
 }
 
+/* Constantly writes contents of out_coord to socket concurrently */
 void *write_data(void *arg) {
 	int *fd = (int *)arg;
 	while(1) {
-		if(gameover == 1) {
+		if(gameover == 1) { //close writing thread on game over
 			pthread_exit(0);
 		}
 		write(*fd, &out_coord, sizeof(out_coord));
 	}
 }
 
-/* Reads and processes sent coord */
+/* Processes coord recieved into in_coord */
 void read_coord(int fd) {
 	memset(&in_coord, 0, sizeof(in_coord));
 	int recieved = 0;
@@ -363,6 +365,7 @@ void check_board(int fd) {
 	return;
 }
 
+/* Checks if input coord has already been used by iterating through array of previously used coords */
 int already_used() {
 	for(int i = 0; i < STORED_INPUTS; i++) {
 		if(strcmp(input, old_inputs[i]) == 0) {
@@ -372,6 +375,7 @@ int already_used() {
 	return 0;
 }
 
+/* Text displayed before start of game */
 void start_screen(int player) {
 	clear();
 	printw("\n\n");
