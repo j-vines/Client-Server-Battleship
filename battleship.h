@@ -8,7 +8,8 @@
 #define PLAYER_TWO 2
 #define WAIT 4
 #define MAX_SHIPS 5
-#define SHIP 1
+#define DESTROYED 2 
+#define SHIP 1		
 #define EMPTY 0
 #define BOARD_LENGTH 4
 #define BOARD_WIDTH 4
@@ -17,6 +18,11 @@
 #define FAIL "F"
 #define READY "R"
 #define STORED_INPUTS 20
+
+/* color pair IDs */
+#define GREEN 1	
+#define RED 2	
+#define YELLOW 3
 
 /* Both player and server get randomly initialized board */
 /* Values can either be SHIP if space contains ship, or EMPTY if space is empty */
@@ -84,6 +90,9 @@ void error_exit(char *msg);
 
 /* Wait for other player to send READY */
 void wait_for_ready(int *fd);
+
+/* Prints current state of game board */
+void print_board();
 
 /* Initialize ncurses screen */
 void init_curse();

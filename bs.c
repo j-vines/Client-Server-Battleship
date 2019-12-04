@@ -9,16 +9,16 @@ char choice;
 char in[100];
 
 /* Catch and ignore SIGINT -- player can't use ctrl-c to close program */
-void sig_handler(int sig) {
+/*void sig_handler(int sig) {
 	return;
-}
+}*/
 
 /* Driver for Battleship - displays main menu */
 /* From main menu you can choose to HOST or JOIN an existing game,
    view the instructions for the game, or exit the program. Navigate menu
    with numeric keys 1-4 */
 int main() {
-	signal(SIGINT, sig_handler); //ignore SIGINT
+	//signal(SIGINT, sig_handler); //ignore SIGINT
 	init_curse();
 	curs_set(0);
 	

@@ -13,13 +13,18 @@ void begin_game(int *fd, int player) {
 	pthread_t write_id;
 	gameover = 0; //gameover is 0 at start of game, set to 1 once fail state is reached
 
+	start_color();
+	init_pair(1, COLOR_GREEN, COLOR_BLACK);
+	init_pair(2, COLOR_RED, COLOR_BLACK);
+	init_pair(3, COLOR_YELLOW, COLOR_BLACK);
+
 	if(player == PLAYER_ONE) {
 		other_player = PLAYER_TWO;
 	} else {
 		other_player = PLAYER_ONE;
 	}
 
-	start_screen(player); //show title screen
+	
 
 	//player places their boards
 	ships_remaining = init_board(player); 
@@ -28,12 +33,7 @@ void begin_game(int *fd, int player) {
 	//Make sure both players are ready
 	wait_for_ready(fd);
 
-
-	//display game startint screen
-	clear();
-	printw("\n\nGame is starting...");
-	refresh();
-	sleep(WAIT);
+	start_screen(player); //show title screen
 
 	//create reading and writing processes
 	pthread_create(&read_id, 0, read_data, (void *)fd);
@@ -115,27 +115,49 @@ int connect_server(char *host, int port) {
 
 /* Print player's board to curses window */
 void print_display() {
-	char row_letter = 'A'; //starts at A
+	int health_space = MAX_SHIPS - ships_remaining;
 
 	clear();
-	/* Print round info */
-	printw("\tShips remaining: %d\n", ships_remaining);
-	printw("\tShips destroyed: %d\n\n", ships_destroyed);
+	/* Print health bar */
+	printw("\tSquadron Health [");
+	for(int i = 0; i < ships_remaining; i++) {
+		if(ships_remaining < 3 && ships_remaining >= 2) { //medium health
+			attron(COLOR_PAIR(YELLOW));
+			addch(ACS_CKBOARD);
+			addch(ACS_CKBOARD);
+			addch(ACS_CKBOARD);
+			attroff(COLOR_PAIR(YELLOW));
+		}
+		else if(ships_remaining < 2) { 					 //poor health
+			attron(COLOR_PAIR(RED));
+			addch(ACS_CKBOARD);
+			addch(ACS_CKBOARD);
+			addch(ACS_CKBOARD);
+			attroff(COLOR_PAIR(RED));
+		} else { 										 //good health
+			attron(COLOR_PAIR(GREEN));
+			addch(ACS_CKBOARD);
+			addch(ACS_CKBOARD);
+			addch(ACS_CKBOARD);
+			attroff(COLOR_PAIR(GREEN));
+		}
+	}
+	for(int i = 0; i < health_space; i++) {
+		printw("   "); //three spaces
+	}
+	printw("]\n");
+
+	/* Print ships you've destroyed display */
+	printw("\tShips you've destroyed: ");
+	for(int i = 0; i < ships_destroyed; i++) {
+		attron(COLOR_PAIR(RED));
+		printw("<X> ");
+		attroff(COLOR_PAIR(RED));
+	}
+	printw("\n\n");
 
 	/* Print board */
-	printw("         1    2    3    4\n\n");//columns
-	for(int row = 0; row < BOARD_LENGTH; row++) {
-		printw("    %c    ", row_letter);
-		for(int col = 0; col < BOARD_WIDTH; col++) {
-			if(board[row][col] == 1) {
-				printw("X    ");
-			} else {
-				printw("     ");
-			}
-		}
-		printw("\n\n");
-		row_letter += 1;
-	}
+	print_board();
 	refresh();
 }
 
@@ -143,6 +165,8 @@ void print_display() {
 int validate() {
 	if(already_used()) { //check if input has already been used
 		printw("You already used that coord!\n");
+		refresh();
+		sleep(2);
 		memset(&input, 0, sizeof(input));
 		return 0;
 	}
@@ -154,6 +178,7 @@ int validate() {
 	} else {
 		printw("That coordinate is invalid!\n");
 		refresh();
+		sleep(2);
 		memset(&input, 0, sizeof(input)); //clear coord buf
 		return 0;
 	}
@@ -165,37 +190,29 @@ int init_board(int seed) {
 	int ships = 0;
 	int ships_to_place = MAX_SHIPS;
 
+	clear();
+	printw("\n\t\t\tArrange your ships...\n");
+	refresh();
+	sleep(WAIT);
 	while(ships < MAX_SHIPS) {
-		clear();
-		char row_letter = 'A';
-		printw("Arrange your ships...\n");
-		printw("\tShips to place: %d\n\n", ships_to_place);
-		printw("         1    2    3    4\n\n");//columns
-		for(int row = 0; row < BOARD_LENGTH; row++) {
-			printw("    %c    ", row_letter);
-			for(int col = 0; col < BOARD_WIDTH; col++) {
-				if(board[row][col] == 1) {
-					printw("X    ");
-				} else {
-					printw("     ");
-				}
-			}
-			printw("\n\n");
-			row_letter += 1;
-		}
 		int valid = 0;
 		while(valid == 0) { //ask for coordinate until user input is formatted correctly
+			clear();
+			printw("\n\tShips to place: ");
+			for(int i = 0; i < ships_to_place; i++) {
+				attron(COLOR_PAIR(GREEN));
+				addch(ACS_LARROW);
+				printw("I");
+				addch(ACS_RARROW);
+				printw(" ");
+				attroff(COLOR_PAIR(GREEN));
+			}
+			printw("\n\n");
+			print_board();
 			printw("Place a ship at coordinate: ");
 			refresh();
 			getstr(input);
 			valid = validate();
-		}
-		if(already_used()) {
-			printw("\nYou already placed a ship at %s.\n", input);
-			refresh();
-			sleep(WAIT);
-			clear();
-			continue;
 		}
 		strcpy(old_inputs[ships], input);
 
@@ -234,6 +251,8 @@ void send_coord(int fd) {
 	memset(&out_coord, 0, sizeof(out_coord));
 	int valid = 0;
 	while(valid == 0) { //ask for coordinate until user input is formatted correctly
+		clear();
+		print_display();
 		printw("Fire at coordinate: ");
 		refresh();
 		getstr(input);
@@ -252,7 +271,8 @@ void *read_data(void *arg) {
 		if(gameover == 1) { //close reading thread on game over
 			pthread_exit(0);
 		}
-		read(*fd, &in_coord, sizeof(in_coord));
+		(void)read(*fd, &in_coord, sizeof(in_coord));
+		//printw("Recieved: %s\n", in_coord);
 	}
 }
 
@@ -263,7 +283,7 @@ void *write_data(void *arg) {
 		if(gameover == 1) { //close writing thread on game over
 			pthread_exit(0);
 		}
-		write(*fd, &out_coord, sizeof(out_coord));
+		(void)write(*fd, &out_coord, sizeof(out_coord));
 	}
 }
 
@@ -271,7 +291,10 @@ void *write_data(void *arg) {
 void read_coord(int fd) {
 	memset(&in_coord, 0, sizeof(in_coord));
 	int recieved = 0;
+	printw("Waiting...\n");
 	while(1) {
+		//printw("Working with coord: %s\n", in_coord);
+		refresh();
 		if(in_coord[0] == 0) {
 			sleep(1);
 		} 
@@ -304,7 +327,7 @@ void read_coord(int fd) {
 				recieved = 1;
 				printw("Your strike missed...");
 				refresh();
-				sleep(4);
+				sleep(WAIT);
 				print_display();
 			} else { // already notified, ignore
 				sleep(1);
@@ -317,7 +340,7 @@ void read_coord(int fd) {
 			strcpy(last, in_coord);
 			check_board(fd);
 			print_display();
-			return;
+			return;		
 		}
 	}
 }
@@ -354,7 +377,7 @@ void check_board(int fd) {
 	if(board[col][row] != EMPTY) { //ship is hit
 		clear();
 		printw("\n\nYour ship has sunk!\n\n");
-		board[col][row] = 0;
+		board[col][row] = DESTROYED;
 		ships_remaining -= 1;
 		strcpy(out_coord, HIT);
 	} else { //ship is not hit
@@ -388,12 +411,10 @@ void start_screen(int player) {
 	printw("	 _____  _____  _____  _____  __     _____  _____  _____  _____  _____ \n");
 	printw("	| __  ||  _  ||_   _||_   _||  |   |   __||   __||  |  ||     ||  _  |\n");
 	printw("	| __ -||     |  | |    | |  |  |__ |   __||__   ||     ||-   -||   __|\n");
-	printw("	|_____||__|__|  |_|    |_|  |_____||_____||_____||__|__||_____||__|   \n");
-	printw("	IS BEGINNING...");                                                            
+	printw("	|_____||__|__|  |_|    |_|  |_____||_____||_____||__|__||_____||__|   \n\n\n");                                                           
 	refresh();
-	sleep(WAIT);
-	clear();
-	printw("	You are Player %d\n\n", player);
+	sleep(2);
+	printw("				You are Player %d\n\n", player);
 	refresh();
 	sleep(WAIT);
 }
@@ -401,6 +422,8 @@ void start_screen(int player) {
 /* Player fails - disconnects from server, prints fail state */
 void failure(int fd) {
 	strcpy(out_coord, "F");
+	memset(old_inputs, 0, sizeof(old_inputs));
+	old_inputs_index = 0;
 	clear();
 	printw("\n\nAll of your ships have been sunk...\n\n");
 	refresh();
@@ -415,6 +438,8 @@ void failure(int fd) {
 
 /* Player wins - disconnects from server, prints success state */
 void success(int fd) {
+	memset(old_inputs, 0, sizeof(old_inputs));
+	old_inputs_index = 0;
 	clear();
 	printw("\n\nYou sunk all of Player %d's ships...\n\n", other_player);
 	refresh();
@@ -438,7 +463,7 @@ void wait_for_ready(int *fd) {
 	printw("Hit any key when you're ready to play!");
 	getch();
 	strcpy(out_coord, READY);
-	write(*fd, &out_coord, sizeof(out_coord));
+	(void)write(*fd, &out_coord, sizeof(out_coord));
 	memset(&out_coord, 0, sizeof(in_coord));
 
 	clear();
@@ -450,8 +475,44 @@ void wait_for_ready(int *fd) {
 			memset(&in_coord, 0, sizeof(in_coord));
 			return;
 		}
-		read(*fd, &in_coord, sizeof(in_coord));
+		(void)read(*fd, &in_coord, sizeof(in_coord));
 	}
+}
+
+/* Prints current state of game board */
+void print_board() {
+	char row_letter = 'A';
+		
+		printw("             1        2        3        4\n");//columns
+		printw("         ------------------------------------\n");
+		for(int row = 0; row < BOARD_LENGTH; row++) {
+			printw("    %c   |", row_letter);
+			for(int col = 0; col < BOARD_WIDTH; col++) {
+				if(board[row][col] == SHIP) {
+					printw("   ");
+					attron(COLOR_PAIR(GREEN));
+					addch(ACS_LARROW);
+					printw("I");
+					addch(ACS_RARROW);
+					attroff(COLOR_PAIR(GREEN));
+					printw("   ");
+				} 
+				else if(board[row][col] == EMPTY){
+					printw("         ");
+				}
+				else if(board[row][col] == DESTROYED){
+					printw("   ");
+					attron(COLOR_PAIR(RED));
+					addch(ACS_LARROW);
+					printw("X");
+					addch(ACS_RARROW);
+					attroff(COLOR_PAIR(RED));
+					printw("   ");
+				}
+			}
+			printw("\n        |\n        |\n        |\n");
+			row_letter += 1;
+		}
 }
 
 /* Initialize ncurses screen */
