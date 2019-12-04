@@ -13,18 +13,11 @@ void begin_game(int *fd, int player) {
 	pthread_t write_id;
 	gameover = 0; //gameover is 0 at start of game, set to 1 once fail state is reached
 
-	start_color();
-	init_pair(1, COLOR_GREEN, COLOR_BLACK);
-	init_pair(2, COLOR_RED, COLOR_BLACK);
-	init_pair(3, COLOR_YELLOW, COLOR_BLACK);
-
 	if(player == PLAYER_ONE) {
 		other_player = PLAYER_TWO;
 	} else {
 		other_player = PLAYER_ONE;
 	}
-
-	
 
 	//player places their boards
 	ships_remaining = init_board(player); 
@@ -123,22 +116,16 @@ void print_display() {
 	for(int i = 0; i < ships_remaining; i++) {
 		if(ships_remaining < 3 && ships_remaining >= 2) { //medium health
 			attron(COLOR_PAIR(YELLOW));
-			addch(ACS_CKBOARD);
-			addch(ACS_CKBOARD);
-			addch(ACS_CKBOARD);
+			printw(":::");
 			attroff(COLOR_PAIR(YELLOW));
 		}
 		else if(ships_remaining < 2) { 					 //poor health
 			attron(COLOR_PAIR(RED));
-			addch(ACS_CKBOARD);
-			addch(ACS_CKBOARD);
-			addch(ACS_CKBOARD);
+			printw(":::");
 			attroff(COLOR_PAIR(RED));
 		} else { 										 //good health
 			attron(COLOR_PAIR(GREEN));
-			addch(ACS_CKBOARD);
-			addch(ACS_CKBOARD);
-			addch(ACS_CKBOARD);
+			printw(":::");
 			attroff(COLOR_PAIR(GREEN));
 		}
 	}
@@ -460,6 +447,8 @@ void error_exit(char *msg) {
 /* Wait for other player to send READY */
 void wait_for_ready(int *fd) {
 	clear();
+	printw("\n");
+	print_board();
 	printw("Hit any key when you're ready to play!");
 	getch();
 	strcpy(out_coord, READY);
@@ -467,7 +456,7 @@ void wait_for_ready(int *fd) {
 	memset(&out_coord, 0, sizeof(in_coord));
 
 	clear();
-	printw("Waiting for Player %d...", other_player);
+	printw("\n\tWaiting for Player %d...", other_player);
 	refresh();
 
 	while(1) {
@@ -519,6 +508,11 @@ void print_board() {
 void init_curse() {
 	initscr();
 	cbreak();
+	start_color();
+	keypad(stdscr, TRUE);
+	init_pair(1, COLOR_GREEN, COLOR_BLACK);
+	init_pair(2, COLOR_RED, COLOR_BLACK);
+	init_pair(3, COLOR_YELLOW, COLOR_BLACK);
 	clear();
 	refresh();
 }

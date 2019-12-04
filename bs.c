@@ -2,6 +2,11 @@
 #include "menu.h"
 #include "battleship.h"
 
+#define HOST 0
+#define JOIN 1
+#define INSTRUCTIONS 2
+#define QUIT 3
+
 /* bs.c contains driver and functions for main menu */
 
 char name[25];
@@ -9,50 +14,56 @@ char choice;
 char in[100];
 
 /* Catch and ignore SIGINT -- player can't use ctrl-c to close program */
-/*void sig_handler(int sig) {
+void sig_handler(int sig) {
 	return;
-}*/
+}
 
 /* Driver for Battleship - displays main menu */
 /* From main menu you can choose to HOST or JOIN an existing game,
    view the instructions for the game, or exit the program. Navigate menu
    with numeric keys 1-4 */
 int main() {
-	//signal(SIGINT, sig_handler); //ignore SIGINT
+	int option = HOST; //default option is host on start
+
+	signal(SIGINT, sig_handler); //ignore SIGINT
 	init_curse();
 	curs_set(0);
 	
 	while(1) {
 		noecho();
 		memset(&in, 0, sizeof(in));
-		display_menu();
-		choice = getch();
+		display_menu(option);
+		int nav = getch();
 		
-		// main menu
-		switch(choice) {
-		case '1' : //host a game
-			host();
-			break;
-		case '2' : //join a game
-			join();
-			break;
-		case '3' : //display the instructions
-			instructions();
-			break;
-		case '4' : //exit the program
-			quit();
-			break;
-		default :
-			printw("\n		Invalid input. Enter a number 1-4.\n");
-			refresh();
-			sleep(WAIT);
-			break;
+		switch(nav) {
+			case KEY_UP:
+				if(option == HOST) { //already at top of list
+					break;
+				} else {
+					option -= 1; //navigate to next option up
+					break;
+				}
+			case KEY_DOWN:
+				if(option == QUIT) { //already at bottom of list
+					break;
+				} else {
+					option += 1; //navigate to next option down
+					break;
+				}
+			case 10: //enter key
+				if(option == HOST) host();
+				else if(option == JOIN) join();
+				else if(option == INSTRUCTIONS) instructions();
+				else quit();
+				break;
+			default:
+				break;
 		}
 	}
 }
 
 /* Displays main menu with options to host game, join game, or view leaderboards */
-void display_menu() {
+void display_menu(int choice) {
 	clear();
 	printw("\n\n   __________________________________   ________________________________\n");
 	printw("   |  _  ||     ||      ||      ||  |   |     ||     ||  |  ||  ||     |\n");
@@ -63,14 +74,55 @@ void display_menu() {
 	printw("		____________________________________________\n");
 	printw("		|                                          |\n");
 	printw("		|   Would you like to...                   |\n");
-	printw("		|                                          |\n");	
-	printw("		|   (1)    HOST GAME                       |\n");
-	printw("		|   (2)    JOIN GAME                       |\n");
-	printw("		|   (3)    SEE INSTRUCTIONS                |\n");
 	printw("		|                                          |\n");
-	printw("		|   (4)    EXIT                            |\n");
-	printw("		!__________________________________________!\n");
-
+	if(choice == HOST) {
+		printw("		|          ");
+		attron(COLOR_PAIR(GREEN));
+		printw("HOST GAME");
+		attroff(COLOR_PAIR(GREEN));
+		printw("                       |\n");
+		printw("		|          JOIN GAME                       |\n");
+		printw("		|          SEE INSTRUCTIONS                |\n");
+		printw("		|                                          |\n");
+		printw("		|          EXIT                            |\n");
+		printw("		!__________________________________________!\n");
+	}
+	else if(choice == JOIN) {
+		printw("		|          HOST GAME                       |\n");
+		printw("		|          ");
+		attron(COLOR_PAIR(GREEN));
+		printw("JOIN GAME");
+		attroff(COLOR_PAIR(GREEN));
+		printw("                       |\n");
+		printw("		|          SEE INSTRUCTIONS                |\n");
+		printw("		|                                          |\n");
+		printw("		|          EXIT                            |\n");
+		printw("		!__________________________________________!\n");
+	}
+	else if(choice == INSTRUCTIONS) {
+		printw("		|          HOST GAME                       |\n");
+		printw("		|          JOIN GAME                       |\n");
+		printw("		|          ");
+		attron(COLOR_PAIR(GREEN));
+		printw("SEE INSTRUCTIONS");
+		attroff(COLOR_PAIR(GREEN));
+		printw("                |\n");
+		printw("		|                                          |\n");
+		printw("		|          EXIT                            |\n");
+		printw("		!__________________________________________!\n");
+	}
+	else {
+		printw("		|          HOST GAME                       |\n");
+		printw("		|          JOIN GAME                       |\n");
+		printw("		|          SEE INSTRUCTIONS                |\n");
+		printw("		|                                          |\n");
+		printw("		|          ");
+		attron(COLOR_PAIR(GREEN));
+		printw("EXIT");
+		attroff(COLOR_PAIR(GREEN));
+		printw("                            |\n");
+		printw("		!__________________________________________!\n");
+	}
 	refresh();
 
 }
@@ -98,7 +150,7 @@ void host() {
 	if((listenfd = open_server(port)) < 0) { //get listen file descriptor
 		printw("	Could not open server on provided port");
 		refresh();
-		sleep(WAIT);
+		sleep(2);
 		return;
 	}
 	
@@ -151,7 +203,7 @@ void join() {
 	if((output_fd = connect_server(host, port)) < 0) { //get file descriptor for writing to server
 		printw("	Could not connect to server at provided hostname and port");
 		refresh();
-		sleep(WAIT);
+		sleep(2);
 		return;
 	}
 	clear();
