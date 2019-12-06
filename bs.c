@@ -6,7 +6,6 @@
 #define JOIN 1
 #define INSTRUCTIONS 2
 #define QUIT 3
-
 #define JOIN_PREVIOUS 0
 #define JOIN_NEW 1
 
@@ -17,7 +16,7 @@ char choice;
 char in[100];
 
 /* Catch and ignore SIGINT -- player can't use ctrl-c to close program */
-void sig_handler(int sig) {
+void sigint_handler(int sig) {
 	return;
 }
 
@@ -28,7 +27,7 @@ void sig_handler(int sig) {
 int main() {
 	int option = HOST; //default option is host on start
 
-	//signal(SIGINT, sig_handler); //ignore SIGINT
+	signal(SIGINT, sigint_handler); //ignore SIGINT
 	init_curse();
 	curs_set(0);
 	
@@ -171,7 +170,10 @@ void host() {
 		sleep(WAIT);
 
 		//connection has been made -- begin game
+		echo();
 		begin_game(&connfd, PLAYER_ONE);
+		close(connfd);
+		close(listenfd);
 		return;
 	}
 }
@@ -333,7 +335,9 @@ void join() {
 	sleep(WAIT);
 
 	//connected to server -- begin game
+	echo();
 	begin_game(&output_fd, PLAYER_TWO);
+	close(output_fd);
 	return;
 }
 

@@ -7,11 +7,18 @@
 
 /* battleship.c contains functions used during game play */
 
+/* Ignore SIGPIPE so that other end of socket doesn't crash when the other closes */
+void sigpipe_handler(int sig) {
+	return;
+}
+
 /* Client begins game after connecting to server */
 void begin_game(int *fd, int player) {
 	pthread_t read_id;
 	pthread_t write_id;
 	gameover = 0; //gameover is 0 at start of game, set to 1 once fail state is reached
+
+	signal(SIGPIPE, sigpipe_handler); //ignore SIGPIPE
 
 	if(player == PLAYER_ONE) {
 		other_player = PLAYER_TWO;
@@ -409,32 +416,35 @@ void start_screen(int player) {
 /* Player fails - disconnects from server, prints fail state */
 void failure(int fd) {
 	strcpy(out_coord, "F");
-	memset(old_inputs, 0, sizeof(old_inputs));
-	old_inputs_index = 0;
 	clear();
 	printw("\n\nAll of your ships have been sunk...\n\n");
 	refresh();
 	sleep(WAIT);
+	attron(COLOR_PAIR(RED));
 	printw("	YOU LOSE.");
+	attroff(COLOR_PAIR(RED));
 	refresh();
 	sleep(WAIT);
 	strcpy(out_coord, FAIL);
 	gameover = 1;
+	reset_game();
 	return;
 }
 
 /* Player wins - disconnects from server, prints success state */
 void success(int fd) {
-	memset(old_inputs, 0, sizeof(old_inputs));
-	old_inputs_index = 0;
+	
 	clear();
 	printw("\n\nYou sunk all of Player %d's ships...\n\n", other_player);
 	refresh();
 	sleep(WAIT);
+	attron(COLOR_PAIR(GREEN));
 	printw("	YOU WIN!");
+	attroff(COLOR_PAIR(GREEN));
 	refresh();
 	sleep(WAIT);
 	gameover = 1;
+	reset_game();
 	return;
 }
 
@@ -447,7 +457,7 @@ void error_exit(char *msg) {
 /* Wait for other player to send READY */
 void wait_for_ready(int *fd) {
 	clear();
-	printw("\n");
+	printw("\n\n\n");
 	print_board();
 	printw("Hit any key when you're ready to play!");
 	getch();
@@ -471,7 +481,6 @@ void wait_for_ready(int *fd) {
 /* Prints current state of game board */
 void print_board() {
 	char row_letter = 'A';
-		
 		printw("             1        2        3        4\n");//columns
 		printw("         ------------------------------------\n");
 		for(int row = 0; row < BOARD_LENGTH; row++) {
@@ -507,7 +516,6 @@ void print_board() {
 /* Initialize ncurses screen */
 void init_curse() {
 	initscr();
-	cbreak();
 	start_color();
 	keypad(stdscr, TRUE);
 	init_pair(1, COLOR_GREEN, COLOR_BLACK);
@@ -515,4 +523,17 @@ void init_curse() {
 	init_pair(3, COLOR_YELLOW, COLOR_BLACK);
 	clear();
 	refresh();
+}
+
+/* Resets game board and all changed instance variables */
+void reset_game() {
+	memset(old_inputs, 0, sizeof(old_inputs));
+	old_inputs_index = 0;
+
+	//clear board
+	for(int row = 0; row < BOARD_LENGTH; row++) {
+		for(int col = 0; col < BOARD_WIDTH; col++) {
+			board[row][col] = EMPTY;
+		}
+	}
 }

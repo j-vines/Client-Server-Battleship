@@ -97,4 +97,7 @@ void print_board();
 /* Initialize ncurses screen */
 void init_curse();
 
+/* Resets game board and all changed instance variables */
+void reset_game();
+
 #endif
