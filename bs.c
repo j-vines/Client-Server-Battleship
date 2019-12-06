@@ -7,6 +7,9 @@
 #define INSTRUCTIONS 2
 #define QUIT 3
 
+#define JOIN_PREVIOUS 0
+#define JOIN_NEW 1
+
 /* bs.c contains driver and functions for main menu */
 
 char name[25];
@@ -25,7 +28,7 @@ void sig_handler(int sig) {
 int main() {
 	int option = HOST; //default option is host on start
 
-	signal(SIGINT, sig_handler); //ignore SIGINT
+	//signal(SIGINT, sig_handler); //ignore SIGINT
 	init_curse();
 	curs_set(0);
 	
@@ -175,37 +178,155 @@ void host() {
 
 /* Asks for ip address/port number to connect to, then creates client to connect to server */
 void join() {
-	int port, output_fd;
-	char host[100];
-	char port_str[100];
-	clear();
-	echo();
-	printw("\n\n");
-	printw("	    __  _____  _____  _____    _____  _____  _____  _____ \n");
-	printw("	 __|  ||     ||     ||   | |  |   __||  _  ||     ||   __|\n");
-	printw("	|  |  ||  |  ||-   -|| | | |  |  |  ||     || | | ||   __|\n");
-	printw("	|_____||_____||_____||_|___|  |_____||__|__||_|_|_||_____|\n\n");                                                              
-	printw("	Host to connect to: ");
-	refresh();
-	getstr(host);
+	int port = 0, output_fd;
+	char host[25];
+	char port_str[10];
+	int nav = 0;
+	int option = JOIN_PREVIOUS;
+	FILE *fp = NULL;
+
 	clear();
 	printw("\n\n");
 	printw("	    __  _____  _____  _____    _____  _____  _____  _____ \n");
 	printw("	 __|  ||     ||     ||   | |  |   __||  _  ||     ||   __|\n");
 	printw("	|  |  ||  |  ||-   -|| | | |  |  |  ||     || | | ||   __|\n");
 	printw("	|_____||_____||_____||_|___|  |_____||__|__||_|_|_||_____|\n\n");
-	printw("	Host: %s\n", host);
-	printw("	Port to connect to: ");
+	printw("		____________________________________________\n");
+	printw("		|                                          |\n");
+	printw("		|   Connect to...                          |\n");
+	printw("		|                                          |\n");
+	printw("		|          ");
+	attron(COLOR_PAIR(GREEN));
+	printw("PREVIOUS HOST/PORT");
+	attroff(COLOR_PAIR(GREEN));
+	printw("              |\n");
+	printw("		|          NEW HOST/PORT                   |\n");
+	printw("		!__________________________________________!\n");
 	refresh();
-	getstr(port_str);
-	sscanf(port_str, "%d", &port); //set port
 
+	while(nav != 10) { //loop until enter key has been pressed
+		nav = getch();
+		switch(nav) {
+			case KEY_UP:
+				if(option == JOIN_PREVIOUS) { //already at top of list
+					break;
+				} else {
+					option -= 1; //navigate to next option up
+					clear();
+					printw("\n\n");
+					printw("	    __  _____  _____  _____    _____  _____  _____  _____ \n");
+					printw("	 __|  ||     ||     ||   | |  |   __||  _  ||     ||   __|\n");
+					printw("	|  |  ||  |  ||-   -|| | | |  |  |  ||     || | | ||   __|\n");
+					printw("	|_____||_____||_____||_|___|  |_____||__|__||_|_|_||_____|\n\n");
+					printw("		____________________________________________\n");
+					printw("		|                                          |\n");
+					printw("		|   Connect to...                          |\n");
+					printw("		|                                          |\n");
+					printw("		|          ");
+					attron(COLOR_PAIR(GREEN));
+					printw("PREVIOUS HOST/PORT");
+					attroff(COLOR_PAIR(GREEN));
+					printw("              |\n");
+					printw("		|          NEW HOST/PORT                   |\n");
+					printw("		!__________________________________________!\n");
+					break;
+				}
+			case KEY_DOWN:
+				if(option == JOIN_NEW) { //already at bottom of list
+					break;
+				} else {
+					option += 1; //navigate to next option down
+					clear();
+					printw("\n\n");
+					printw("	    __  _____  _____  _____    _____  _____  _____  _____ \n");
+					printw("	 __|  ||     ||     ||   | |  |   __||  _  ||     ||   __|\n");
+					printw("	|  |  ||  |  ||-   -|| | | |  |  |  ||     || | | ||   __|\n");
+					printw("	|_____||_____||_____||_|___|  |_____||__|__||_|_|_||_____|\n\n");
+					printw("		____________________________________________\n");
+					printw("		|                                          |\n");
+					printw("		|   Connect to...                          |\n");
+					printw("		|                                          |\n");
+					printw("		|          PREVIOUS HOST/PORT              |\n");
+					printw("		|          ");
+					attron(COLOR_PAIR(GREEN));
+					printw("NEW HOST/PORT");
+					attroff(COLOR_PAIR(GREEN));
+					printw("                   |\n");
+					printw("		!__________________________________________!\n");
+					break;
+				}
+		}
+	}
+
+	if(option == JOIN_PREVIOUS) {	//read file for previously used host and port
+		fp = fopen("prev_ip.txt", "rb+");
+		if(fp == NULL || fscanf(fp, "%s %s", host, port_str) != 2) {
+			printw("\tNo previously used host/port available\n");
+			refresh();
+			sleep(2);
+			fclose(fp);
+			return;
+		}
+		fclose(fp);
+		
+		clear();
+		printw("\n\n");
+		printw("	    __  _____  _____  _____    _____  _____  _____  _____ \n");
+		printw("	 __|  ||     ||     ||   | |  |   __||  _  ||     ||   __|\n");
+		printw("	|  |  ||  |  ||-   -|| | | |  |  |  ||     || | | ||   __|\n");
+		printw("	|_____||_____||_____||_|___|  |_____||__|__||_|_|_||_____|\n\n");
+		printw("	Host: %s\n", host);
+		printw("	Port: %s\n\n", port_str);
+		printw("	Press any key to connect\n");
+		refresh();
+		getch();
+	} else {						//enter new host and port to connect to
+		echo();
+		clear();
+		printw("\n\n");
+		printw("	    __  _____  _____  _____    _____  _____  _____  _____ \n");
+		printw("	 __|  ||     ||     ||   | |  |   __||  _  ||     ||   __|\n");
+		printw("	|  |  ||  |  ||-   -|| | | |  |  |  ||     || | | ||   __|\n");
+		printw("	|_____||_____||_____||_|___|  |_____||__|__||_|_|_||_____|\n\n");                                                              
+		printw("	Host: ");
+		refresh();
+		getstr(host);
+		clear();
+		printw("\n\n");
+		printw("	    __  _____  _____  _____    _____  _____  _____  _____ \n");
+		printw("	 __|  ||     ||     ||   | |  |   __||  _  ||     ||   __|\n");
+		printw("	|  |  ||  |  ||-   -|| | | |  |  |  ||     || | | ||   __|\n");
+		printw("	|_____||_____||_____||_|___|  |_____||__|__||_|_|_||_____|\n\n");
+		printw("	Host: %s\n", host);
+		printw("	Port: ");
+		refresh();
+		getstr(port_str);
+		clear();
+		printw("\n\n");
+		printw("	    __  _____  _____  _____    _____  _____  _____  _____ \n");
+		printw("	 __|  ||     ||     ||   | |  |   __||  _  ||     ||   __|\n");
+		printw("	|  |  ||  |  ||-   -|| | | |  |  |  ||     || | | ||   __|\n");
+		printw("	|_____||_____||_____||_|___|  |_____||__|__||_|_|_||_____|\n\n");
+		printw("	Host: %s\n", host);
+		printw("	Port: %s\n\n", port_str);
+		printw("	Press any key to connect\n");
+		refresh();
+		getch();
+	}
+
+	//connect to server
+	sscanf(port_str, "%d", &port); //set port
 	if((output_fd = connect_server(host, port)) < 0) { //get file descriptor for writing to server
 		printw("	Could not connect to server at provided hostname and port");
 		refresh();
 		sleep(2);
 		return;
 	}
+	/* Write new IP address and port to prev_ip.txt */
+	fp = fopen("prev_ip.txt", "w");
+	fprintf(fp, "%s %s", host, port_str);
+	fclose(fp);
+
 	clear();
 	printw("\n\nYou joined %s's BATTLESHIP game!\n", host);
 	refresh();
