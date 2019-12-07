@@ -7,7 +7,7 @@
 #define PLAYER_ONE 1
 #define PLAYER_TWO 2
 #define WAIT 4
-#define MAX_SHIPS 1
+#define MAX_SHIPS 5
 #define DESTROYED 2 
 #define SHIP 1		
 #define EMPTY 0
