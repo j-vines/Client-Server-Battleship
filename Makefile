@@ -10,7 +10,7 @@ battleship: bs.c menu.h common.h battleship.c battleship.h
 	$(CC) -o battleship bs.o battleship.o $(LFLAGS)
 
 clean:
-	rm *.o prev_ip.txt battleship
+	rm -f *.o prev_ip.txt battleship
 
 test:
 	./battleship

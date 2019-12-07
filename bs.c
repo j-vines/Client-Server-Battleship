@@ -16,7 +16,7 @@ char choice;
 char in[100];
 
 /* Catch and ignore SIGINT -- player can't use ctrl-c to close program */
-void sigint_handler(int sig) {
+void sigint_handler_menu(int sig) {
 	return;
 }
 
@@ -27,11 +27,11 @@ void sigint_handler(int sig) {
 int main() {
 	int option = HOST; //default option is host on start
 
-	signal(SIGINT, sigint_handler); //ignore SIGINT
 	init_curse();
 	curs_set(0);
 	
 	while(1) {
+		signal(SIGINT, sigint_handler_menu); //ignore SIGINT
 		noecho();
 		memset(&in, 0, sizeof(in));
 		display_menu(option);
@@ -266,7 +266,7 @@ void join() {
 			printw("\tNo previously used host/port available\n");
 			refresh();
 			sleep(2);
-			fclose(fp);
+			if(fp != NULL) fclose(fp); //close the previous ip file if it was sucessfully opened but improperly read
 			return;
 		}
 		fclose(fp);
@@ -360,7 +360,7 @@ void instructions() {
 	printw("	inate grid and 5 ships. Once your ships are arranged on your grid, you\n");
 	printw("	and your opponent will take turns firing missiles at coordinates on the\n");
 	printw("	other person's grid. The player who destroys all of the other's ships\n");
-	printw("	with missiles first wins.\n\n");
+	printw("	with missiles first wins. Once game starts use CTRL-C to quit and exit.\n\n");
 	printw("	Coordinates should be formatted as \"A1\", \"C4\", etc.\n");                                                             
     refresh();
     getch();                                                                                

@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <curses.h>
+#include <signal.h>
 
 #define MAXLINE 8192
 

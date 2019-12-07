@@ -7,7 +7,7 @@
 #define PLAYER_ONE 1
 #define PLAYER_TWO 2
 #define WAIT 4
-#define MAX_SHIPS 5
+#define MAX_SHIPS 1
 #define DESTROYED 2 
 #define SHIP 1		
 #define EMPTY 0
@@ -17,7 +17,12 @@
 #define MISS "M"
 #define FAIL "F"
 #define READY "R"
+#define I_QUIT "Q"
 #define STORED_INPUTS 20
+#define WIN 0
+#define FORFEIT 1
+#define WAITING 0
+#define SENDING 1
 
 /* color pair IDs */
 #define GREEN 1	
@@ -31,6 +36,7 @@ int ships_remaining;
 int ships_destroyed;
 int other_player;
 int gameover;
+int state;
 
 /* Input and output buffers for reading/writing coordinates */
 char last[4];
@@ -62,7 +68,7 @@ int init_board(int seed);
 void send_coord(int fd);
 
 /* Reads and processes sent coord */
-void read_coord(int fd);
+void process_coord(int fd);
 
 /* Constantly reads contents from socket into in_coord concurrently */
 void *read_data(void *fd);
@@ -83,7 +89,7 @@ void start_screen(int player);
 void failure(int fd);
 
 /* Player wins - disconnects from server, prints success state */
-void success(int fd);
+void success(int fd, int condition);
 
 /* Exit and error, print error message to standard output */
 void error_exit(char *msg);
@@ -99,5 +105,7 @@ void init_curse();
 
 /* Resets game board and all changed instance variables */
 void reset_game();
+
+void return_to_menu();
 
 #endif

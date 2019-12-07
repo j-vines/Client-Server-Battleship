@@ -12,6 +12,77 @@ void sigpipe_handler(int sig) {
 	return;
 }
 
+void sigint_handler_game(int sig) {
+	int option = 0;
+	int nav = 0;
+	clear();
+	printw("\n\n");
+	printw("\tAre you sure you want to quit and exit?\n\n");
+	attron(COLOR_PAIR(RED));
+	printw("\tNO\n");
+	attroff(COLOR_PAIR(RED));
+	printw("\tYES\n");
+	refresh();
+
+	while(nav != 10) { //loop until enter key has been pressed
+		nav = getch();
+		switch(nav) {
+			case KEY_UP:
+				if(option == 0) { //already at top of list
+					break;
+				} else {
+					option -= 1; //navigate to next option up
+					clear();
+					printw("\n\n");
+					printw("\tAre you sure you want to quit and exit?\n\n");
+					attron(COLOR_PAIR(RED));
+					printw("\tNO\n");
+					attroff(COLOR_PAIR(RED));
+					printw("\tYES\n");
+					refresh();
+					break;
+				}
+			case KEY_DOWN:
+				if(option == 1) { //already at bottom of list
+					break;
+				} else {
+					option += 1; //navigate to next option down
+					clear();
+					printw("\n\n");
+					printw("\tAre you sure you want to quit and exit?\n\n");
+					printw("\tNO\n");
+					attron(COLOR_PAIR(RED));
+					printw("\tYES\n");
+					attroff(COLOR_PAIR(RED));
+					refresh();
+					break;
+				}
+		}
+	}
+	if(option == 0) { //don't quit -- return
+		if(state == WAITING) {	//print display for reading
+			print_display();
+			printw("Waiting...");
+			refresh();
+		}
+		else if(state == SENDING) { //print display for sending
+			print_display();
+			printw("Fire at coordinate: ");
+			refresh();
+		}
+		return;
+	} else { //quit, notify other player of forfeit
+		strcpy(out_coord, I_QUIT);
+		clear();
+		printw("\n\n\tQuitting game...");
+		refresh();
+		sleep(WAIT); //give time for other program to read I_QUIT before exiting
+		endwin();
+		exit(0);
+		return;
+	}
+}
+
 /* Client begins game after connecting to server */
 void begin_game(int *fd, int player) {
 	pthread_t read_id;
@@ -19,6 +90,7 @@ void begin_game(int *fd, int player) {
 	gameover = 0; //gameover is 0 at start of game, set to 1 once fail state is reached
 
 	signal(SIGPIPE, sigpipe_handler); //ignore SIGPIPE
+	
 
 	if(player == PLAYER_ONE) {
 		other_player = PLAYER_TWO;
@@ -38,6 +110,7 @@ void begin_game(int *fd, int player) {
 	//create reading and writing processes
 	pthread_create(&read_id, 0, read_data, (void *)fd);
 	pthread_create(&write_id, 0, write_data, (void *)fd);
+	signal(SIGINT, sigint_handler_game);
 
 	//main game loop
 	while(ships_remaining > 0) {
@@ -46,20 +119,19 @@ void begin_game(int *fd, int player) {
 		
 		if(player == PLAYER_ONE) { //Player 1's loop
 			send_coord(*fd);
-			read_coord(*fd);
-			if(gameover == 1) return; //return to main menu
+			process_coord(*fd);
 		} else { //Player 2's loop
-			read_coord(*fd);
-			if(gameover == 1) return; //return to main menu
+			process_coord(*fd);
 			send_coord(*fd);
 		}
+		if(gameover == 1) return;
 	}
 	return;
 }
 
 /* Creates and binds file descriptor to provided port to begin listening for clients */
 int open_server(char *port) {
-	int listenfd;
+	int listenfd = 0;
 	struct addrinfo hints, *listp, *p;
 
 	/* Create listenfd */
@@ -210,28 +282,28 @@ int init_board(int seed) {
 		}
 		strcpy(old_inputs[ships], input);
 
-		int row;
-		int col;
+		int row = 0;
+		int col = 0;
 
 		//parse coord string for numeric coordinates
 		switch(input[0]) {
 			case 'A' :
-				col = 0;
+				row = 0;
 				break;
 			case 'B' :
-				col = 1;
+				row = 1;
 				break;
 			case 'C' :
-				col = 2;
+				row = 2;
 				break;
 			case 'D' :
-				col = 3;
+				row = 3;
 				break;
 		}
-		sscanf(&input[1], "%d", &row);
-		row -= 1;
+		sscanf(&input[1], "%d", &col);
+		col -= 1;
 
-		board[col][row] = SHIP;
+		board[row][col] = SHIP;
 		ships += 1;
 		ships_to_place -= 1;
 	}
@@ -242,9 +314,11 @@ int init_board(int seed) {
 
 /* Sends coord to other player */
 void send_coord(int fd) {
+	state = SENDING;
 	memset(&out_coord, 0, sizeof(out_coord));
 	int valid = 0;
 	while(valid == 0) { //ask for coordinate until user input is formatted correctly
+		if(gameover == 1) return;
 		clear();
 		print_display();
 		printw("Fire at coordinate: ");
@@ -265,8 +339,9 @@ void *read_data(void *arg) {
 		if(gameover == 1) { //close reading thread on game over
 			pthread_exit(0);
 		}
-		(void)read(*fd, &in_coord, sizeof(in_coord));
-		//printw("Recieved: %s\n", in_coord);
+		if(read(*fd, &in_coord, sizeof(in_coord)) == -1) { //means other program has closed socket, game is over
+			pthread_exit(0);
+		}
 	}
 }
 
@@ -277,17 +352,20 @@ void *write_data(void *arg) {
 		if(gameover == 1) { //close writing thread on game over
 			pthread_exit(0);
 		}
-		(void)write(*fd, &out_coord, sizeof(out_coord));
+		if(write(*fd, &out_coord, sizeof(out_coord)) == -1) { //means other program has closed socket, game is over
+			pthread_exit(0);
+		}
 	}
 }
 
 /* Processes coord recieved into in_coord */
-void read_coord(int fd) {
-	memset(&in_coord, 0, sizeof(in_coord));
+void process_coord(int fd) {
+	state = WAITING;
+	//memset(&in_coord, 0, sizeof(in_coord));
 	int recieved = 0;
 	printw("Waiting...\n");
 	while(1) {
-		//printw("Working with coord: %s\n", in_coord);
+		if(gameover == 1) return;
 		refresh();
 		if(in_coord[0] == 0) {
 			sleep(1);
@@ -296,7 +374,11 @@ void read_coord(int fd) {
 			sleep(1);
 		}
 		else if(strcmp(&in_coord[0], FAIL) == 0) {
-			success(fd);
+			success(fd, WIN);
+			return;
+		}
+		else if(strcmp(&in_coord[0], I_QUIT) == 0) { //wait for read_data to handle forfeit
+			success(fd, FORFEIT);
 			return;
 		}
 		
@@ -326,9 +408,7 @@ void read_coord(int fd) {
 			} else { // already notified, ignore
 				sleep(1);
 			}
-			
 		}
-
 		// new coord has been recieved -- check board and print display
 		else {
 			strcpy(last, in_coord);
@@ -341,37 +421,37 @@ void read_coord(int fd) {
 
 /* Checks board at recieved coord and updates board accordingly */
 void check_board(int fd) {
-	int row;
-	int col;
+	int row = 0;
+	int col = 0;
 
 	//parse coord string for numeric coordinates
 	switch(in_coord[0]) {
 		case 'A' :
-			col = 0;
+			row = 0;
 			break;
 		case 'B' :
-			col = 1;
+			row = 1;
 			break;
 		case 'C' :
-			col = 2;
+			row = 2;
 			break;
 		case 'D' :
-			col = 3;
+			row = 3;
 			break;
 	}
 
-	sscanf(&in_coord[1], "%d", &row);
-	row -= 1;
+	sscanf(&in_coord[1], "%d", &col);
+	col -= 1;
 
 	clear();
 	printw("\n\nIncoming missile strike at %s!\n\n", in_coord);
 	refresh();
 	sleep(WAIT);
 	//check board at coord
-	if(board[col][row] != EMPTY) { //ship is hit
+	if(board[row][col] != EMPTY) { //ship is hit
 		clear();
 		printw("\n\nYour ship has sunk!\n\n");
-		board[col][row] = DESTROYED;
+		board[row][col] = DESTROYED;
 		ships_remaining -= 1;
 		strcpy(out_coord, HIT);
 	} else { //ship is not hit
@@ -408,14 +488,15 @@ void start_screen(int player) {
 	printw("	|_____||__|__|  |_|    |_|  |_____||_____||_____||__|__||_____||__|   \n\n\n");                                                           
 	refresh();
 	sleep(2);
-	printw("				You are Player %d\n\n", player);
+	printw("				You are Player %d\n\n\n\n\n\n\n\n\n", player);
+	printw("				Type CTRL-C to exit");
 	refresh();
 	sleep(WAIT);
 }
 
 /* Player fails - disconnects from server, prints fail state */
 void failure(int fd) {
-	strcpy(out_coord, "F");
+	strcpy(out_coord, FAIL);
 	clear();
 	printw("\n\nAll of your ships have been sunk...\n\n");
 	refresh();
@@ -426,25 +507,35 @@ void failure(int fd) {
 	refresh();
 	sleep(WAIT);
 	strcpy(out_coord, FAIL);
-	gameover = 1;
-	reset_game();
+	return_to_menu();
 	return;
 }
 
 /* Player wins - disconnects from server, prints success state */
-void success(int fd) {
-	
-	clear();
-	printw("\n\nYou sunk all of Player %d's ships...\n\n", other_player);
+void success(int fd, int condition) {
+	if(condition == WIN) {
+		clear();
+		printw("\n\nYou sunk all of Player %d's ships...\n\n", other_player);
+		refresh();
+		sleep(WAIT);
+		attron(COLOR_PAIR(GREEN));
+		printw("	YOU WIN!");
+		attroff(COLOR_PAIR(GREEN));
+	} else { //player wins by default
+		clear();
+		printw("\n\nPlayer %d quit the game...\n\n", other_player);
+		refresh();
+		sleep(WAIT);
+		attron(COLOR_PAIR(GREEN));
+		printw("	YOU WIN!\n");
+		attroff(COLOR_PAIR(GREEN));
+		refresh();
+		sleep(2);
+		printw("	...by default.");
+	}
 	refresh();
 	sleep(WAIT);
-	attron(COLOR_PAIR(GREEN));
-	printw("	YOU WIN!");
-	attroff(COLOR_PAIR(GREEN));
-	refresh();
-	sleep(WAIT);
-	gameover = 1;
-	reset_game();
+	return_to_menu();
 	return;
 }
 
@@ -462,7 +553,9 @@ void wait_for_ready(int *fd) {
 	printw("Hit any key when you're ready to play!");
 	getch();
 	strcpy(out_coord, READY);
-	(void)write(*fd, &out_coord, sizeof(out_coord));
+	if(write(*fd, &out_coord, sizeof(out_coord)) == -1) {
+		error_exit("Write error: wait_for_ready()");
+	}
 	memset(&out_coord, 0, sizeof(in_coord));
 
 	clear();
@@ -474,7 +567,9 @@ void wait_for_ready(int *fd) {
 			memset(&in_coord, 0, sizeof(in_coord));
 			return;
 		}
-		(void)read(*fd, &in_coord, sizeof(in_coord));
+		if(read(*fd, &in_coord, sizeof(in_coord)) == -1) {
+			error_exit("Read error: wait_for_ready()");
+		}
 	}
 }
 
@@ -523,6 +618,11 @@ void init_curse() {
 	init_pair(3, COLOR_YELLOW, COLOR_BLACK);
 	clear();
 	refresh();
+}
+
+void return_to_menu() {
+	gameover = 1;
+	reset_game();
 }
 
 /* Resets game board and all changed instance variables */
