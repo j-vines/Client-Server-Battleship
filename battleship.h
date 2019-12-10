@@ -7,6 +7,7 @@
 #define PLAYER_ONE 1
 #define PLAYER_TWO 2
 #define WAIT 4
+#define BUFF_SIZE 4
 #define MAX_SHIPS 5
 #define DESTROYED 2 
 #define SHIP 1		
@@ -39,12 +40,12 @@ int gameover;
 int state;
 
 /* Input and output buffers for reading/writing coordinates */
-char last[4];
-char in_coord[4];
-char out_coord[4];
-char input[4];
+char last[BUFF_SIZE];
+char in_coord[BUFF_SIZE];
+char out_coord[BUFF_SIZE];
+char input[BUFF_SIZE];
 int old_inputs_index;
-char old_inputs[STORED_INPUTS][4]; //array to hold inputs already tried
+char old_inputs[STORED_INPUTS][BUFF_SIZE]; //array to hold inputs already tried
 
 /* Client begins game after connecting to server */
 void begin_game(int *fd, int player);
@@ -106,6 +107,7 @@ void init_curse();
 /* Resets game board and all changed instance variables */
 void reset_game();
 
+/* Sets gameover to 1 and resets game state so that program returns to main menu and game can be played again */
 void return_to_menu();
 
 #endif

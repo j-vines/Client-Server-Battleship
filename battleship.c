@@ -12,6 +12,9 @@ void sigpipe_handler(int sig) {
 	return;
 }
 
+/* On SIGINT player is asked if they want to quit
+   if player chooses to quit, program exits and other
+   player is notified of the forfeit and returns to menu */
 void sigint_handler_game(int sig) {
 	int option = 0;
 	int nav = 0;
@@ -120,7 +123,7 @@ void begin_game(int *fd, int player) {
 		if(player == PLAYER_ONE) { //Player 1's loop
 			send_coord(*fd);
 			process_coord(*fd);
-		} else { //Player 2's loop
+		} else { 				  //Player 2's loop
 			process_coord(*fd);
 			send_coord(*fd);
 		}
@@ -238,7 +241,8 @@ int validate() {
 	}
 
 	if((input[0] == 'A' || input[0] == 'B' || input[0] == 'C' || input[0] == 'D') &&
-		(input[1] == '1' || input[1] == '2' || input[1] == '3' || input[1] == '4')) { //coord valid
+		(input[1] == '1' || input[1] == '2' || input[1] == '3' || input[1] == '4') &&
+			input[2] == 0) { //coord valid
 		return 1;
 
 	} else {
@@ -444,19 +448,19 @@ void check_board(int fd) {
 	col -= 1;
 
 	clear();
-	printw("\n\nIncoming missile strike at %s!\n\n", in_coord);
+	printw("\n\n\tIncoming missile strike at %s!\n\n", in_coord);
 	refresh();
 	sleep(WAIT);
 	//check board at coord
 	if(board[row][col] != EMPTY) { //ship is hit
 		clear();
-		printw("\n\nYour ship has sunk!\n\n");
+		printw("\n\n\tYour ship has sunk!\n\n");
 		board[row][col] = DESTROYED;
 		ships_remaining -= 1;
 		strcpy(out_coord, HIT);
 	} else { //ship is not hit
 		clear();
-		printw("\n\nThe strike missed!\n\n");
+		printw("\n\n\tThe strike missed!\n\n");
 		strcpy(out_coord, MISS);
 	}
 	refresh();
@@ -498,11 +502,11 @@ void start_screen(int player) {
 void failure(int fd) {
 	strcpy(out_coord, FAIL);
 	clear();
-	printw("\n\nAll of your ships have been sunk...\n\n");
+	printw("\n\n\tAll of your ships have been sunk...\n\n");
 	refresh();
 	sleep(WAIT);
 	attron(COLOR_PAIR(RED));
-	printw("	YOU LOSE.");
+	printw("\t\tYOU LOSE.");
 	attroff(COLOR_PAIR(RED));
 	refresh();
 	sleep(WAIT);
@@ -515,23 +519,23 @@ void failure(int fd) {
 void success(int fd, int condition) {
 	if(condition == WIN) {
 		clear();
-		printw("\n\nYou sunk all of Player %d's ships...\n\n", other_player);
+		printw("\n\n\tYou sunk all of Player %d's ships...\n\n", other_player);
 		refresh();
 		sleep(WAIT);
 		attron(COLOR_PAIR(GREEN));
-		printw("	YOU WIN!");
+		printw("\t\tYOU WIN!");
 		attroff(COLOR_PAIR(GREEN));
 	} else { //player wins by default
 		clear();
-		printw("\n\nPlayer %d quit the game...\n\n", other_player);
+		printw("\n\n\tPlayer %d quit the game...\n\n", other_player);
 		refresh();
 		sleep(WAIT);
 		attron(COLOR_PAIR(GREEN));
-		printw("	YOU WIN!\n");
+		printw("\t\tYOU WIN!\n");
 		attroff(COLOR_PAIR(GREEN));
 		refresh();
 		sleep(2);
-		printw("	...by default.");
+		printw("\t\t...by default.");
 	}
 	refresh();
 	sleep(WAIT);
@@ -559,7 +563,7 @@ void wait_for_ready(int *fd) {
 	memset(&out_coord, 0, sizeof(in_coord));
 
 	clear();
-	printw("\n\tWaiting for Player %d...", other_player);
+	printw("\n\n\tWaiting for Player %d...", other_player);
 	refresh();
 
 	while(1) {
@@ -620,6 +624,7 @@ void init_curse() {
 	refresh();
 }
 
+/* Sets gameover to 1 and resets game state so that program returns to main menu and game can be played again */
 void return_to_menu() {
 	gameover = 1;
 	reset_game();

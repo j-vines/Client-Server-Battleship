@@ -12,9 +12,9 @@
 #include <netdb.h>
 #include <string.h>
 #include <pthread.h>
-#include <arpa/inet.h>
 #include <curses.h>
 #include <signal.h>
+#include <arpa/inet.h>
 
 #define MAXLINE 8192
 
